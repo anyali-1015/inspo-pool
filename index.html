@@ -1,5 +1,11 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style></head><body>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="favicon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="灵感池"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#F1F0F5" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#131217" media="(prefers-color-scheme: dark)"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
+.install{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 10px 10px 12px;margin-block:4px 8px}
+.install img{border-radius:10px;flex:none}
+.install .itext{flex:1;min-width:0;font-size:13px;color:var(--muted);display:flex;flex-direction:column}
+.install .itext b{color:var(--ink);font-size:14px}
+.install .btn{height:34px;padding:0 14px;font-size:14px}
+</style></head><body>
 <title>灵感池</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -135,6 +141,12 @@ textarea.input{min-height:84px;resize:vertical}
   <div class="rail" id="rail"></div>
 </div></header>
 
+<div class="gutter" id="installWrap" hidden><div class="wrap"><div class="install">
+  <img src="icon-192.png" alt="" width="40" height="40">
+  <div class="itext"><b>添加到主屏幕</b><span id="installTip"></span></div>
+  <button class="btn primary" id="installBtn" hidden>添加</button>
+  <button class="iconbtn" id="installClose" aria-label="关闭提示">✕</button>
+</div></div></div>
 <main class="gutter"><div class="wrap" id="view"></div></main>
 
 <button class="fab" id="fab" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span id="fabtxt">添加灵感</span></button>
@@ -558,6 +570,29 @@ $("#backupBtn").addEventListener("click", ()=>{
   });
 });
 
+
+/* ---------- add to home screen ---------- */
+(function(){
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  let dismissed = false; try{ dismissed = localStorage.getItem("inspo-install-dismissed")==="1"; }catch(e){}
+  if (standalone || dismissed || window.claude) return;
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  const inApp = /MicroMessenger|XiaoHongShu|discover|aweme|Weibo|QQ\//i.test(ua);
+  const isMobile = isIOS || /Android/i.test(ua);
+  if (!isMobile) return;
+  const wrap = $("#installWrap"), tip = $("#installTip"), btn = $("#installBtn");
+  if (inApp) tip.textContent = "先点右上角「···」，选择在浏览器中打开，再添加";
+  else if (isIOS) tip.textContent = /CriOS|FxiOS|EdgiOS/.test(ua) ? "点分享按钮 → 添加到主屏幕（建议用 Safari 打开）" : "点底部分享按钮 ⎙ → 添加到主屏幕";
+  else tip.textContent = "点浏览器菜单 ⋮ → 添加到主屏幕 / 安装应用";
+  wrap.hidden = false;
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); deferred = e; btn.hidden = false; tip.textContent = "装到手机桌面，像 app 一样打开"; });
+  btn.addEventListener("click", async ()=>{ if(!deferred) return; deferred.prompt(); const r = await deferred.userChoice; deferred = null; if (r.outcome==="accepted") wrap.hidden = true; });
+  window.addEventListener("appinstalled", ()=>{ wrap.hidden = true; });
+  $("#installClose").addEventListener("click", ()=>{ wrap.hidden = true; try{ localStorage.setItem("inspo-install-dismissed","1"); }catch(e){} });
+})();
 render();
 boot();
 })();
