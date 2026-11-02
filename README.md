@@ -11,4 +11,6 @@
 ## 数据存储
 
 - 在 Claude 里作为 Artifact 打开时，数据存在云端，多设备同步。
-- 独立打开（本地 / GitHub Pages）时，数据存在当前浏览器的 localStorage，只在这台设备上。
+- 独立打开（本地 / GitHub Pages）时，数据存在当前浏览器的 localStorage，只在这台设备上。右上角「备份」可以导出 / 导入 JSON 文件。
+
+在线使用：https://anyali-1015.github.io/inspo-pool/

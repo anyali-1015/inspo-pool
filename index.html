@@ -38,6 +38,7 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .hrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 h1{font-family:var(--f-display);font-weight:800;font-size:28px;letter-spacing:.02em;margin:0;text-wrap:balance}
 .count{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.hright{display:flex;align-items:center;gap:8px}
 .status{font-size:12px;color:var(--muted);margin-top:2px}
 .status:empty{display:none}
 .search{margin-top:10px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:40px}
@@ -128,7 +129,7 @@ textarea.input{min-height:84px;resize:vertical}
 </style>
 
 <header class="gutter"><div class="wrap">
-  <div class="hrow"><h1 id="h1">灵感池</h1><span class="count" id="count"></span></div>
+  <div class="hrow"><h1 id="h1">灵感池</h1><span class="hright"><span class="count" id="count"></span><button class="iconbtn" id="backupBtn" hidden>备份</button></span></div>
   <div class="status" id="status">正在连接数据…</div>
   <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="搜索标题、介绍、tag" autocomplete="off"></div>
   <div class="rail" id="rail"></div>
@@ -231,7 +232,8 @@ async function boot(){
 }
 function localMode(){
   state.mode="local"; state.canWrite=true; loadLocal();
-  setStatus("离线模式：数据只保存在这台设备的浏览器里");
+  setStatus("数据只存在这台设备的浏览器里，记得偶尔点「备份」导出一份");
+  $("#backupBtn").hidden = false;
   render();
 }
 function setStatus(t){ $("#status").textContent = t; }
@@ -517,6 +519,44 @@ $("#view").addEventListener("click", e=>{
   const ed = e.target.closest("[data-edit]"); if(ed){ form(state.tab, find(state.tab, ed.dataset.edit)); }
 });
 $("#fab").addEventListener("click", ()=>form(state.tab));
+
+/* ---------- backup (local mode) ---------- */
+$("#backupBtn").addEventListener("click", ()=>{
+  const n = COLS.reduce((s,c)=>s+state.data[c].length,0);
+  openSheet(`
+    <h2>备份与恢复</h2>
+    <div class="hint" style="font-size:14px">当前共 ${n} 条。数据只存在这个浏览器里，清缓存或换手机前先导出一份。</div>
+    <div class="actions"><button class="btn primary grow" id="exp">导出备份文件</button></div>
+    <label class="f" for="impfile">从备份文件恢复（会和现有内容合并，重复的不会加两次）</label>
+    <input type="file" id="impfile" accept=".json,application/json" class="input">
+  `, s=>{
+    s.querySelector("#exp").addEventListener("click", ()=>{
+      const blob = new Blob([JSON.stringify({app:"inspo-pool",v:1,exportedAt:new Date().toISOString(),...state.data},null,2)],{type:"application/json"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `灵感池备份-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+      toast("已导出");
+    });
+    s.querySelector("#impfile").addEventListener("change", e=>{
+      const file = e.target.files[0]; if(!file) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try{
+          const j = JSON.parse(r.result); let added = 0;
+          COLS.forEach(c=>{
+            if(!Array.isArray(j[c])) return;
+            const have = new Set(state.data[c].map(x=>x.id));
+            j[c].forEach(x=>{ if(x && typeof x==="object" && !have.has(x.id)){ state.data[c].push({...x, id:x.id||uid()}); added++; } });
+          });
+          saveLocal(); closeSheet(); render(); toast(`已恢复 ${added} 条`);
+        }catch(err){ toast("文件格式不对，请选择导出的备份文件"); }
+      };
+      r.readAsText(file);
+    });
+  });
+});
 
 render();
 boot();
