@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style></head><body>
+<title>灵感池</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800&display=swap">
+<style>
+/* Layout: phone-first notebook — sticky header with search + tag rail, content (masonry cards / list), fixed bottom tab bar, bottom sheets for detail & forms */
+:root{
+  --bg:#F1F0F5; --surface:#FFFFFF; --sunk:#E8E6EE; --ink:#1B1A21; --muted:#6C6A78; --line:#DFDDE7;
+  --accent:#D2335C; --accent-ink:#FFFFFF; --accent-soft:#FBE3EA;
+  --xhs:#FF2442; --dy:#111114; --dy-2:#25F4EE; --ins:#C13584; --other:#6C6A78;
+  --shadow:0 1px 2px rgba(27,26,33,.06),0 4px 14px rgba(27,26,33,.05);
+  --f-display:"Noto Serif SC","Songti SC","STSong",serif;
+  --f-body:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131217; --surface:#1D1C23; --sunk:#26242D; --ink:#EEEDF3; --muted:#9C99AA; --line:#2E2C36;
+  --accent:#FF5C82; --accent-ink:#1B0C11; --accent-soft:#3A1A24;
+  --dy:#EDEDF2; --other:#9C99AA; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131217; --surface:#1D1C23; --sunk:#26242D; --ink:#EEEDF3; --muted:#9C99AA; --line:#2E2C36;
+  --accent:#FF5C82; --accent-ink:#1B0C11; --accent-soft:#3A1A24;
+  --dy:#EDEDF2; --other:#9C99AA; --shadow:none; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin:0 auto}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 8px}
+.hrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:800;font-size:28px;letter-spacing:.02em;margin:0;text-wrap:balance}
+.count{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.status{font-size:12px;color:var(--muted);margin-top:2px}
+.status:empty{display:none}
+.search{margin-top:10px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:40px}
+.search input{border:0;background:transparent;outline:0;flex:1;min-width:0;height:100%}
+.search svg{flex:none;color:var(--muted)}
+.rail{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:10px;padding-bottom:2px}
+.rail::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px;white-space:nowrap;color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip .n{color:var(--muted);margin-left:4px;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"] .n{color:inherit;opacity:.65}
+.rail .sep{flex:none;width:1px;background:var(--line);margin:4px 2px}
+
+main{padding-block:6px calc(140px + env(safe-area-inset-bottom,0px))}
+
+/* idea cards — masonry */
+.masonry{column-count:2;column-gap:10px}
+@media (min-width:640px){.masonry{column-count:3}}
+.card{break-inside:avoid;margin-bottom:10px;display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;box-shadow:var(--shadow)}
+.card h3{font-family:var(--f-display);font-weight:600;font-size:16px;line-height:1.35;margin:8px 0 6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.card p{margin:0 0 8px;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:1px 7px}
+.plat{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;letter-spacing:.02em}
+.plat i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.plat.xhs{color:var(--xhs)} .plat.xhs i{background:var(--xhs)}
+.plat.douyin{color:var(--dy)} .plat.douyin i{background:var(--dy);box-shadow:2px 2px 0 var(--dy-2)}
+.plat.ins{color:var(--ins)} .plat.ins i{background:var(--ins);border-radius:50%}
+.plat.other{color:var(--other)} .plat.other i{background:var(--other)}
+
+/* title list */
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.trow{display:flex;gap:10px;align-items:flex-start;padding:12px 12px 12px 14px;border-top:1px solid var(--line)}
+.trow:first-child{border-top:0}
+.trow .body{flex:1;min-width:0}
+.trow .text{font-size:15px;overflow-wrap:anywhere;margin-bottom:4px}
+.trow .tags{margin-top:2px}
+.iconbtn{flex:none;border:1px solid var(--line);background:var(--bg);border-radius:10px;height:32px;min-width:32px;padding:0 10px;font-size:12px;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.iconbtn.ok{color:var(--accent);border-color:var(--accent)}
+.rowbtns{display:flex;gap:6px;flex:none}
+
+/* creators */
+.crow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 14px;border-top:1px solid var(--line)}
+.crow:first-child{border-top:0}
+.crow .name{font-weight:600;font-size:16px;overflow-wrap:anywhere;min-width:0}
+.crow .meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.crow .comment{grid-column:1/-1;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.golink{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 12px;border-radius:10px;background:var(--ink);color:var(--bg);text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap}
+.golink.disabled{background:var(--sunk);color:var(--muted);pointer-events:none}
+.textbtn{border:0;background:none;padding:0;color:var(--muted);font-size:12px;text-decoration:underline;text-underline-offset:3px}
+
+.empty{text-align:center;color:var(--muted);padding:48px 16px;font-size:14px}
+.empty b{display:block;font-family:var(--f-display);font-size:18px;color:var(--ink);margin-bottom:6px}
+
+/* tab bar + fab */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .inner{display:grid;grid-template-columns:repeat(3,1fr);max-width:760px;margin:0 auto}
+nav.tabs button{border:0;background:none;padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-selected="true"]{color:var(--ink);font-weight:600}
+nav.tabs button[aria-selected="true"] svg{color:var(--accent)}
+.fab{position:fixed;z-index:7;right:max(18px,calc(env(safe-area-inset-right,0px) + 18px));bottom:calc(76px + env(safe-area-inset-bottom,0px));height:52px;padding:0 20px 0 16px;border-radius:26px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(210,51,92,.35)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;z-index:20;background:rgba(10,8,14,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:640px;max-height:92%;overflow-y:auto;background:var(--surface);border-radius:20px 20px 0 0;padding-top:8px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
+.sheet h2{font-family:var(--f-display);font-weight:800;font-size:21px;margin:4px 0 12px;line-height:1.35;overflow-wrap:anywhere;text-wrap:balance}
+.sheet .note{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;margin:12px 0}
+.urlbox{font-size:12px;color:var(--muted);background:var(--bg);border-radius:10px;padding:8px 10px;overflow-wrap:anywhere;margin:10px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:600;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--xhs)}
+.btn.danger.armed{background:var(--xhs);border-color:var(--xhs);color:#fff}
+.btn.grow{flex:1}
+label.f{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
+.input,textarea.input{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;outline:0;font-size:16px}
+textarea.input{min-height:84px;resize:vertical}
+.input:focus{border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.pick{display:flex;flex-wrap:wrap;gap:6px}
+.addtag{display:flex;gap:6px;margin-top:8px}
+.addtag .input{flex:1;min-width:0;padding:8px 12px;font-size:15px}
+.toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;pointer-events:none}
+</style>
+
+<header class="gutter"><div class="wrap">
+  <div class="hrow"><h1 id="h1">灵感池</h1><span class="count" id="count"></span></div>
+  <div class="status" id="status">正在连接数据…</div>
+  <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="搜索标题、介绍、tag" autocomplete="off"></div>
+  <div class="rail" id="rail"></div>
+</div></header>
+
+<main class="gutter"><div class="wrap" id="view"></div></main>
+
+<button class="fab" id="fab" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span id="fabtxt">添加灵感</span></button>
+
+<nav class="tabs" role="tablist"><div class="inner">
+  <button role="tab" data-tab="ideas" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="10" rx="2"/><rect x="13" y="3" width="8" height="6" rx="2"/><rect x="3" y="15" width="8" height="6" rx="2"/><rect x="13" y="11" width="8" height="10" rx="2"/></svg>灵感池</button>
+  <button role="tab" data-tab="titles" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h9"/></svg>爆款标题</button>
+  <button role="tab" data-tab="creators" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>参考博主</button>
+</div></nav>
+
+<div id="sheetRoot"></div>
+
+<script>
+(() => {
+const COLS = ["ideas","titles","creators"];
+const PLAT = {xhs:"小红书", douyin:"抖音", ins:"Instagram", other:"其他"};
+const DEFAULT_TAGS = {
+  ideas:["低粉爆款","POV系列","拍照灵感","可1:1模仿","健身","穿搭"],
+  titles:["日常照","健身场景","忧郁","反差","干货"],
+  creators:["拍照","健身","穿搭","vlog"]
+};
+const TABMETA = {
+  ideas:{h:"灵感池", add:"添加灵感", ph:"搜索标题、介绍、tag"},
+  titles:{h:"爆款标题", add:"添加标题", ph:"搜索标题"},
+  creators:{h:"参考博主", add:"添加博主", ph:"搜索博主名、备注"}
+};
+const state = { tab:"ideas", data:{ideas:[],titles:[],creators:[]}, filter:{ideas:{tag:null,q:""},titles:{tag:null,q:""},creators:{tag:null,plat:null,q:""}}, canWrite:false, mode:"loading" };
+let db = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- platform & share-text parsing ---------- */
+function detectPlat(url){
+  const u = (url||"").toLowerCase();
+  if (/xiaohongshu\.com|xhslink\.com|xhs\.cn/.test(u)) return "xhs";
+  if (/douyin\.com|iesdouyin\.com/.test(u)) return "douyin";
+  if (/instagram\.com|instagr\.am/.test(u)) return "ins";
+  return "other";
+}
+function parseShare(text){
+  const m = (text||"").match(/https?:\/\/[^\s，。！!、"'“”]+/);
+  const url = m ? m[0].replace(/[，,。.]+$/,"") : "";
+  let rest = (text||"").replace(url,"")
+    .replace(/复制本条信息.*$/s,"").replace(/复制打开抖音.*?(?=【|$)/,"").replace(/打开【?小红书】?App.*$/s,"")
+    .replace(/[\d.]+\s*[a-zA-Z]{2,}:\/?\s*/,"").replace(/^[\d.]+\s+/,"")
+    .replace(/.{0,30}发布了一篇小红书笔记，快来看吧！/,"").replace(/😆/g,"")
+    .replace(/看看【(.+?)的作品】/,"").replace(/\s+/g," ").trim();
+  return {url, title:rest.slice(0,80)};
+}
+function normUrl(u){ u=(u||"").trim(); if(u && !/^https?:\/\//i.test(u)) u="https://"+u; return u; }
+
+/* ---------- storage ---------- */
+const LKEY = "inspo-pool-local-v1";
+function loadLocal(){ try{ const j = JSON.parse(localStorage.getItem(LKEY)||"null"); if(j) COLS.forEach(c=> state.data[c]=j[c]||[]);}catch(e){} }
+function saveLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(state.data)); }catch(e){} }
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+
+async function addItem(col, obj){
+  obj.createdAt = Date.now();
+  if (db){ try{ await db.collection(col).add(obj); }catch(e){ fail(e); } }
+  else { state.data[col].push({id:uid(), ...obj}); saveLocal(); render(); }
+}
+async function saveItem(col, id, obj){
+  if (db){ try{ await db.doc(col+"/"+id).set(obj); }catch(e){ fail(e); } }
+  else { const i = state.data[col].findIndex(x=>x.id===id); if(i>-1) state.data[col][i]={id,...obj}; saveLocal(); render(); }
+}
+async function delItem(col, id){
+  if (db){ try{ await db.doc(col+"/"+id).delete(); }catch(e){ fail(e); } }
+  else { state.data[col]=state.data[col].filter(x=>x.id!==id); saveLocal(); render(); }
+}
+function fail(e){
+  const c = e && e.code;
+  toast(c==="quota_exceeded" ? "存储已满，删掉一些旧内容再试" : c==="invalid_argument" ? "没有保存权限，只有页面主人可以修改" : "保存失败，请检查网络后重试");
+}
+function strip(o){ const {id, ...rest} = o; return rest; }
+
+async function boot(){
+  const use = window.claude && window.claude.use;
+  if (!use){ localMode(); return; }
+  let user = null;
+  try{ [db, user] = await Promise.all([use("db"), use("user")]); }catch(e){ db=null; }
+  if (!db){ localMode(); return; }
+  try{ state.canWrite = user ? !!(await user.isOwner()) : true; }catch(e){ state.canWrite = true; }
+  state.mode = "db";
+  const pending = new Set(COLS);
+  const timer = setTimeout(()=>{ if(pending.size) setStatus("暂时连不上数据，显示的可能不是最新内容"); }, 10000);
+  COLS.forEach(col=>{
+    db.collection(col).onSnapshot(snap=>{
+      state.data[col] = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(!snap.metadata.fromCache){ pending.delete(col); if(!pending.size){ clearTimeout(timer); setStatus(state.canWrite?"":"只读模式：只有页面主人可以添加和修改"); } }
+      render();
+    }, err=>{ pending.delete(col); clearTimeout(timer); setStatus("数据连接中断，刷新页面重试"); });
+  });
+  render();
+}
+function localMode(){
+  state.mode="local"; state.canWrite=true; loadLocal();
+  setStatus("离线模式：数据只保存在这台设备的浏览器里");
+  render();
+}
+function setStatus(t){ $("#status").textContent = t; }
+
+/* ---------- filters ---------- */
+function tagCounts(col){
+  const m = new Map();
+  state.data[col].forEach(it => (it.tags||[]).forEach(t => m.set(t,(m.get(t)||0)+1)));
+  return [...m.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0],"zh"));
+}
+function allTags(col){
+  const s = new Set(tagCounts(col).map(x=>x[0]));
+  DEFAULT_TAGS[col].forEach(t=>s.add(t));
+  return [...s];
+}
+function filtered(col){
+  const f = state.filter[col], q = f.q.trim().toLowerCase();
+  return state.data[col]
+    .filter(it => !f.tag || (it.tags||[]).includes(f.tag))
+    .filter(it => !f.plat || it.platform===f.plat)
+    .filter(it => !q || [it.title,it.text,it.note,it.name,it.comment,(it.tags||[]).join(" ")].join(" ").toLowerCase().includes(q))
+    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+}
+
+/* ---------- render ---------- */
+function platHTML(p){ p = PLAT[p]?p:"other"; return `<span class="plat ${p}"><i></i>${PLAT[p]}</span>`; }
+function tagsHTML(tags){ return (tags&&tags.length) ? `<div class="tags">${tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join("")}</div>` : ""; }
+
+function renderRail(){
+  const col = state.tab, f = state.filter[col], tc = tagCounts(col);
+  let h = `<button class="chip" data-tag="" aria-pressed="${!f.tag && !f.plat}">全部<span class="n">${state.data[col].length}</span></button>`;
+  if (col==="creators"){
+    ["xhs","douyin","ins"].forEach(p=>{
+      const n = state.data.creators.filter(c=>c.platform===p).length;
+      h += `<button class="chip" data-plat="${p}" aria-pressed="${f.plat===p}">${PLAT[p]}<span class="n">${n}</span></button>`;
+    });
+    if (tc.length) h += `<span class="sep"></span>`;
+  }
+  tc.forEach(([t,n])=> h += `<button class="chip" data-tag="${esc(t)}" aria-pressed="${f.tag===t}">#${esc(t)}<span class="n">${n}</span></button>`);
+  $("#rail").innerHTML = h;
+}
+
+function render(){
+  const col = state.tab, meta = TABMETA[col], items = filtered(col);
+  $("#h1").textContent = meta.h;
+  $("#count").textContent = items.length===state.data[col].length ? `${items.length} 条` : `${items.length} / ${state.data[col].length} 条`;
+  $("#q").placeholder = meta.ph;
+  if ($("#q").value !== state.filter[col].q) $("#q").value = state.filter[col].q;
+  $("#fabtxt").textContent = meta.add;
+  $("#fab").hidden = !state.canWrite;
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===col));
+  renderRail();
+  const v = $("#view");
+  if (state.mode==="loading"){ v.innerHTML = `<div class="empty">加载中…</div>`; return; }
+  if (!items.length){
+    const none = !state.data[col].length;
+    v.innerHTML = `<div class="empty"><b>${none?"还是空的":"没有匹配的内容"}</b>${none?{ideas:"把小红书 / 抖音 / ins 的分享链接整段粘贴进来，自动识别平台和标题",titles:"刷到有流量的标题就复制进来，一次可以粘贴多行",creators:"记下值得参考的博主和主页链接"}[col]:"换个关键词或清除 tag 筛选"}</div>`;
+    return;
+  }
+  if (col==="ideas"){
+    v.innerHTML = `<div class="masonry">${items.map(it=>`
+      <button class="card" data-open="${it.id}">
+        ${platHTML(it.platform)}
+        <h3>${esc(it.title||"未命名灵感")}</h3>
+        ${it.note?`<p>${esc(it.note)}</p>`:""}
+        ${tagsHTML(it.tags)}
+      </button>`).join("")}</div>`;
+  } else if (col==="titles"){
+    v.innerHTML = `<div class="list">${items.map(it=>`
+      <div class="trow">
+        <div class="body"><div class="text">${esc(it.text)}</div>${tagsHTML(it.tags)}</div>
+        <div class="rowbtns">
+          <button class="iconbtn" data-copy="${it.id}" aria-label="复制标题"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>复制</button>
+          ${state.canWrite?`<button class="iconbtn" data-edit="${it.id}" aria-label="编辑">编辑</button>`:""}
+        </div>
+      </div>`).join("")}</div>`;
+  } else {
+    v.innerHTML = `<div class="list">${items.map(it=>`
+      <div class="crow">
+        <div class="name">${esc(it.name||"未命名博主")}</div>
+        ${it.url?`<a class="golink" href="${esc(it.url)}" target="_blank" rel="noopener">主页 ↗</a>`:`<span class="golink disabled">无链接</span>`}
+        <div class="meta">${platHTML(it.platform)}${tagsHTML(it.tags)}${state.canWrite?`<button class="textbtn" data-edit="${it.id}">编辑</button>`:""}</div>
+        ${it.comment?`<div class="comment">${esc(it.comment)}</div>`:""}
+      </div>`).join("")}</div>`;
+  }
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html, onMount){
+  const root = $("#sheetRoot");
+  root.innerHTML = `<div class="scrim" id="scrim"><div class="sheet gutter" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div></div>`;
+  $("#scrim").addEventListener("click", e=>{ if(e.target.id==="scrim") closeSheet(); });
+  document.body.style.overflow="hidden";
+  onMount && onMount(root.querySelector(".sheet"));
+}
+function closeSheet(){ $("#sheetRoot").innerHTML=""; document.body.style.overflow=""; }
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeSheet(); });
+
+function find(col,id){ return state.data[col].find(x=>x.id===id); }
+
+function ideaDetail(id){
+  const it = find("ideas",id); if(!it) return;
+  openSheet(`
+    ${platHTML(it.platform)}
+    <h2>${esc(it.title||"未命名灵感")}</h2>
+    ${tagsHTML(it.tags)}
+    ${it.note?`<div class="note">${esc(it.note)}</div>`:`<div class="note" style="color:var(--muted)">还没有写介绍</div>`}
+    ${it.url?`<div class="urlbox" id="urltext">${esc(it.url)}</div>`:""}
+    <div class="actions">
+      ${it.url?`<a class="btn primary grow" href="${esc(it.url)}" target="_blank" rel="noopener">打开原笔记 ↗</a><button class="btn" id="cpurl">复制链接</button>`:""}
+    </div>
+    ${state.canWrite?`<div class="actions"><button class="btn grow" id="edit">编辑 / 改 tag</button><button class="btn danger" id="del">删除</button></div>`:""}
+  `, s=>{
+    s.querySelector("#cpurl")?.addEventListener("click", ()=>copy(it.url, s.querySelector("#urltext")));
+    s.querySelector("#edit")?.addEventListener("click", ()=>form("ideas", it));
+    armDelete(s.querySelector("#del"), ()=>{ delItem("ideas", it.id); closeSheet(); toast("已删除"); });
+  });
+}
+
+function armDelete(btn, fn){
+  if(!btn) return;
+  btn.addEventListener("click", ()=>{
+    if (btn.classList.contains("armed")) fn();
+    else { btn.classList.add("armed"); btn.textContent="确认删除"; setTimeout(()=>{ btn.classList.remove("armed"); btn.textContent="删除"; }, 3000); }
+  });
+}
+
+function tagPicker(col, selected){
+  const sel = new Set(selected||[]);
+  const wrap = document.createElement("div");
+  const draw = () => {
+    const tags = allTags(col); sel.forEach(t=>{ if(!tags.includes(t)) tags.push(t); });
+    wrap.innerHTML = `<div class="pick">${tags.map(t=>`<button type="button" class="chip" data-t="${esc(t)}" aria-pressed="${sel.has(t)}">#${esc(t)}</button>`).join("")}</div>
+      <div class="addtag"><input class="input" id="newtag-${col}" placeholder="新 tag，比如：氛围感" maxlength="20"><button type="button" class="btn" id="addtagbtn">加上</button></div>`;
+    wrap.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.t; sel.has(t)?sel.delete(t):sel.add(t); b.setAttribute("aria-pressed", sel.has(t)); }));
+    const inp = wrap.querySelector("input");
+    const add = () => { const t = inp.value.trim().replace(/^#/,""); if(t){ sel.add(t); draw(); wrap.querySelector("input").focus(); } };
+    wrap.querySelector("#addtagbtn").addEventListener("click", add);
+    inp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } });
+  };
+  draw();
+  return { el:wrap, get:()=>[...sel] };
+}
+
+function platSeg(cur){
+  return `<div class="seg" id="platseg">${["xhs","douyin","ins","other"].map(p=>`<button type="button" class="chip" data-p="${p}" aria-pressed="${cur===p}">${PLAT[p]}</button>`).join("")}</div>`;
+}
+function bindSeg(s, init){
+  let v = init;
+  const seg = s.querySelector("#platseg");
+  const set = p => { v=p; seg.querySelectorAll("[data-p]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.p===p)); };
+  seg.querySelectorAll("[data-p]").forEach(b=>b.addEventListener("click",()=>set(b.dataset.p)));
+  return { get:()=>v, set };
+}
+
+function form(col, item){
+  const editing = !!item, it = item || {};
+  let html = "";
+  if (col==="ideas"){
+    html = `<h2>${editing?"编辑灵感":"添加灵感"}</h2>
+      <form id="f">
+        <label class="f" for="fi-url">链接（整段分享文字粘贴进来也行）</label>
+        <textarea class="input" id="fi-url" rows="2" style="min-height:60px" placeholder="粘贴小红书 / 抖音 / ins 链接">${esc(it.url||"")}</textarea>
+        <div class="hint" id="detect"></div>
+        <label class="f" for="fi-title">标题</label>
+        <input class="input" id="fi-title" value="${esc(it.title||"")}" placeholder="一句话记住它">
+        <label class="f">平台</label>${platSeg(it.platform||"xhs")}
+        <label class="f" for="fi-note">介绍 / 为什么存它</label>
+        <textarea class="input" id="fi-note" placeholder="比如：开头 3 秒反差，机位从下往上，可以直接套">${esc(it.note||"")}</textarea>
+        <label class="f">Tag</label><div id="tp"></div>
+        <div class="actions"><button class="btn primary grow" type="submit">${editing?"保存":"添加"}</button>${editing?`<button class="btn danger" type="button" id="del">删除</button>`:""}</div>
+      </form>`;
+  } else if (col==="titles"){
+    html = `<h2>${editing?"编辑标题":"添加标题"}</h2>
+      <form id="f">
+        <label class="f" for="fi-text">${editing?"标题":"标题（每行一条，可一次粘贴多条）"}</label>
+        <textarea class="input" id="fi-text" placeholder="比如：下班后的 30 分钟，是我一天最贵的时间">${esc(it.text||"")}</textarea>
+        <label class="f">Tag</label><div id="tp"></div>
+        <div class="actions"><button class="btn primary grow" type="submit">${editing?"保存":"添加"}</button>${editing?`<button class="btn danger" type="button" id="del">删除</button>`:""}</div>
+      </form>`;
+  } else {
+    html = `<h2>${editing?"编辑博主":"添加博主"}</h2>
+      <form id="f">
+        <label class="f" for="fi-name">博主名</label>
+        <input class="input" id="fi-name" value="${esc(it.name||"")}" placeholder="昵称">
+        <label class="f" for="fi-url">主页链接</label>
+        <textarea class="input" id="fi-url" rows="2" style="min-height:60px" placeholder="粘贴主页链接或分享文字">${esc(it.url||"")}</textarea>
+        <div class="hint" id="detect"></div>
+        <label class="f">平台</label>${platSeg(it.platform||"xhs")}
+        <label class="f" for="fi-comment">备注</label>
+        <textarea class="input" id="fi-comment" placeholder="比如：构图和调色值得学，每周三更新">${esc(it.comment||"")}</textarea>
+        <label class="f">Tag</label><div id="tp"></div>
+        <div class="actions"><button class="btn primary grow" type="submit">${editing?"保存":"添加"}</button>${editing?`<button class="btn danger" type="button" id="del">删除</button>`:""}</div>
+      </form>`;
+  }
+  openSheet(html, s=>{
+    const tp = tagPicker(col, it.tags); s.querySelector("#tp").appendChild(tp.el);
+    let seg = s.querySelector("#platseg") ? bindSeg(s, it.platform||"xhs") : null;
+    const urlEl = s.querySelector("#fi-url");
+    if (urlEl){
+      urlEl.addEventListener("input", ()=>{
+        const p = parseShare(urlEl.value);
+        if (p.url){
+          const pl = detectPlat(p.url); seg.set(pl);
+          s.querySelector("#detect").textContent = `识别到：${PLAT[pl]} 链接`;
+          const t = s.querySelector("#fi-title");
+          if (t && !t.value.trim() && p.title) t.value = p.title;
+          const n = s.querySelector("#fi-name");
+          if (n && !n.value.trim()){ const mm = p.url.match(/instagram\.com\/([^/?#]+)/i); if(mm) n.value = mm[1]; }
+        } else s.querySelector("#detect").textContent = "";
+      });
+    }
+    armDelete(s.querySelector("#del"), ()=>{ delItem(col, it.id); closeSheet(); toast("已删除"); });
+    s.querySelector("#f").addEventListener("submit", async e=>{
+      e.preventDefault();
+      const tags = tp.get();
+      if (col==="ideas"){
+        const raw = urlEl.value; const p = parseShare(raw);
+        const url = normUrl(p.url || raw.trim());
+        const title = s.querySelector("#fi-title").value.trim();
+        if (!url && !title){ toast("至少填一个链接或标题"); return; }
+        const obj = {title, url, platform:seg.get(), note:s.querySelector("#fi-note").value.trim(), tags};
+        closeSheet();
+        if (editing) await saveItem(col, it.id, {...strip(it), ...obj}); else await addItem(col, obj);
+        toast(editing?"已保存":"已添加");
+      } else if (col==="titles"){
+        const v = s.querySelector("#fi-text").value;
+        if (editing){
+          const text = v.trim(); if(!text){ toast("标题不能为空"); return; }
+          closeSheet(); await saveItem(col, it.id, {...strip(it), text, tags}); toast("已保存");
+        } else {
+          const lines = v.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+          if(!lines.length){ toast("先粘贴标题"); return; }
+          closeSheet();
+          for (const text of lines) await addItem(col, {text, tags});
+          toast(`已添加 ${lines.length} 条`);
+        }
+      } else {
+        const raw = urlEl.value; const p = parseShare(raw);
+        const url = normUrl(p.url || raw.trim());
+        const name = s.querySelector("#fi-name").value.trim();
+        if (!name && !url){ toast("至少填博主名或链接"); return; }
+        const obj = {name, url, platform:seg.get(), comment:s.querySelector("#fi-comment").value.trim(), tags};
+        closeSheet();
+        if (editing) await saveItem(col, it.id, {...strip(it), ...obj}); else await addItem(col, obj);
+        toast(editing?"已保存":"已添加");
+      }
+    });
+  });
+}
+
+/* ---------- utils ---------- */
+let toastT;
+function toast(t){
+  document.querySelector(".toast")?.remove();
+  const d = document.createElement("div"); d.className="toast"; d.textContent=t; document.body.appendChild(d);
+  clearTimeout(toastT); toastT = setTimeout(()=>d.remove(), 1600);
+}
+function copy(text, selectEl){
+  const fallback = () => {
+    if (selectEl){ const r=document.createRange(); r.selectNodeContents(selectEl); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); toast("已选中，长按复制"); }
+    else toast("复制失败，请长按文字复制");
+  };
+  try{ navigator.clipboard.writeText(text).then(()=>toast("已复制"), fallback); }catch(e){ fallback(); }
+}
+
+/* ---------- events ---------- */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{ state.tab=b.dataset.tab; window.scrollTo(0,0); render(); }));
+$("#q").addEventListener("input", e=>{ state.filter[state.tab].q = e.target.value; render(); });
+$("#rail").addEventListener("click", e=>{
+  const b = e.target.closest(".chip"); if(!b) return;
+  const f = state.filter[state.tab];
+  if (b.dataset.plat){ f.plat = f.plat===b.dataset.plat ? null : b.dataset.plat; }
+  else if (b.dataset.tag===""){ f.tag=null; if("plat" in f) f.plat=null; }
+  else { f.tag = f.tag===b.dataset.tag ? null : b.dataset.tag; }
+  render();
+});
+$("#view").addEventListener("click", e=>{
+  const o = e.target.closest("[data-open]"); if(o){ ideaDetail(o.dataset.open); return; }
+  const c = e.target.closest("[data-copy]");
+  if(c){ const it=find("titles",c.dataset.copy); const txt=c.closest(".trow").querySelector(".text");
+    copy(it.text, txt); c.classList.add("ok"); setTimeout(()=>c.classList.remove("ok"),1200); return; }
+  const ed = e.target.closest("[data-edit]"); if(ed){ form(state.tab, find(state.tab, ed.dataset.edit)); }
+});
+$("#fab").addEventListener("click", ()=>form(state.tab));
+
+render();
+boot();
+})();
+</script>
+
+</body></html>
