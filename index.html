@@ -194,6 +194,7 @@ textarea.input{min-height:84px;resize:vertical}
 <script>
 (() => {
 const COLS = ["ideas","titles","creators"];
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 const PLAT = {xhs:"小红书", douyin:"抖音", ins:"Instagram", other:"其他"};
 const DEFAULT_TAGS = {
   ideas:["低粉爆款","POV系列","拍照灵感","可1:1模仿","健身","穿搭"],
@@ -316,7 +317,7 @@ function blobToDataURL(b){ return new Promise(r=>{ const f=new FileReader(); f.o
 
 function localMode(){
   state.mode="local"; state.canWrite=true; loadLocal(); loadPhotos();
-  setStatus("数据只存在这台设备的浏览器里，记得偶尔点「备份」导出一份");
+  setStatus(NATIVE ? "" : "数据只存在这台设备的浏览器里，记得偶尔点「备份」导出一份");
   $("#backupBtn").hidden = false;
   render();
 }
@@ -707,7 +708,7 @@ $("#backupBtn").addEventListener("click", ()=>{
   const n = COLS.reduce((s,c)=>s+state.data[c].length,0), np = state.data.photos.length;
   openSheet(`
     <h2>备份与恢复</h2>
-    <div class="hint" style="font-size:14px">当前共 ${n} 条记录、${np} 张照片。数据只存在这个浏览器里，清缓存或换手机前先导出一份。</div>
+    <div class="hint" style="font-size:14px">当前共 ${n} 条记录、${np} 张照片。${NATIVE?"数据存在这台 iPhone 上，换手机或删 app 前先导出一份（可以存到「文件」或 iCloud）。":"数据只存在这个浏览器里，清缓存或换手机前先导出一份。"}</div>
     <div class="actions"><button class="btn primary grow" id="exp">导出备份文件</button></div>
     <label class="f" for="impfile">从备份文件恢复（会和现有内容合并，重复的不会加两次）</label>
     <input type="file" id="impfile" accept=".json,application/json" class="input">
@@ -717,11 +718,20 @@ $("#backupBtn").addEventListener("click", ()=>{
       const photos = [];
       for (const p of state.data.photos) photos.push({id:p.id, note:p.note, tags:p.tags, createdAt:p.createdAt, w:p.w, h:p.h, data: await blobToDataURL(p.blob)});
       const out = {app:"inspo-pool",v:2,exportedAt:new Date().toISOString(),photos}; COLS.forEach(c=>out[c]=state.data[c]);
-      const blob = new Blob([JSON.stringify(out)],{type:"application/json"});
+      const json = JSON.stringify(out), fname = `灵感池备份-${new Date().toISOString().slice(0,10)}.json`;
       eb.disabled = false; eb.textContent = "导出备份文件";
+      if (NATIVE){
+        try{
+          const {Filesystem, Share} = window.Capacitor.Plugins;
+          const w = await Filesystem.writeFile({path:fname, data:json, directory:"CACHE", encoding:"utf8"});
+          await Share.share({title:"灵感池备份", url:w.uri});
+        }catch(err){ if(!/cancel/i.test(String(err && err.message))) toast("导出失败，请重试"); }
+        return;
+      }
+      const blob = new Blob([json],{type:"application/json"});
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `灵感池备份-${new Date().toISOString().slice(0,10)}.json`;
+      a.download = fname;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
       toast("已导出");
@@ -761,7 +771,7 @@ $("#backupBtn").addEventListener("click", ()=>{
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   let dismissed = false; try{ dismissed = localStorage.getItem("inspo-install-dismissed")==="1"; }catch(e){}
-  if (standalone || dismissed || window.claude) return;
+  if (standalone || dismissed || window.claude || NATIVE) return;
   const ua = navigator.userAgent;
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
   const inApp = /MicroMessenger|XiaoHongShu|discover|aweme|Weibo|QQ\//i.test(ua);

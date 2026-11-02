@@ -1,0 +1,11 @@
+{
+  "appId": "com.anyali.inspopool",
+  "appName": "灵感池",
+  "webDir": "www",
+  "backgroundColor": "#F1F0F5",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true,
+    "allowsLinkPreview": false
+  }
+}

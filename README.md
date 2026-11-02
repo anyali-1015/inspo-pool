@@ -15,3 +15,27 @@
 - 独立打开（本地 / GitHub Pages）时，数据存在当前浏览器的 localStorage，只在这台设备上。照片存在浏览器的 IndexedDB 里（自动压缩到长边 1600px）。右上角「备份」可以导出 / 导入 JSON 文件，照片也一起打包。
 
 在线使用：https://anyali-1015.github.io/inspo-pool/
+
+## iPhone App（自己装，不上架）
+
+用 [Capacitor](https://capacitorjs.com) 把同一个页面包成原生 iOS app，数据存在 app 自己的空间里，不受 Safari 清理影响。
+
+**第一次安装（Mac 上做一次）**
+
+1. 装 Xcode（App Store）和 Node.js（https://nodejs.org 下载 LTS）
+2. 终端里运行：
+   ```bash
+   git clone https://github.com/anyali-1015/inspo-pool.git
+   cd inspo-pool
+   npm install
+   npm run sync
+   npm run open
+   ```
+3. Xcode 打开后：左边点 **App** → **Signing & Capabilities** → Team 选 **Add an Account…** 登录你的 Apple ID，选 *(Personal Team)*。如果提示 Bundle Identifier 被占用，把 `com.anyali.inspopool` 后面随便加几个字母。
+4. iPhone 用线连 Mac。iPhone 上打开 **设置 → 隐私与安全性 → 开发者模式**，打开后重启。
+5. Xcode 顶部设备选你的 iPhone，点 ▶ 运行。
+6. 第一次打开会提示不受信任：iPhone **设置 → 通用 → VPN 与设备管理**，点你的 Apple ID → 信任。
+
+**免费 Apple ID 每 7 天会过期**：到期后 app 打不开，连上 Mac 在 Xcode 里再点一次 ▶ 就好，数据不会丢。开通 Apple Developer（99 美元/年）后一次安装可用一年。
+
+**改了页面之后更新 app**：`git pull && npm run sync`，再在 Xcode 点 ▶。

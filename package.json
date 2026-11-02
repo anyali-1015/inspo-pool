@@ -1,0 +1,20 @@
+{
+  "name": "inspo-pool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "灵感池 — 自媒体灵感库（iOS app 用 Capacitor 打包）",
+  "scripts": {
+    "build": "node scripts/build-web.mjs",
+    "sync": "npm run build && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.10"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.6.10",
+    "@capacitor/filesystem": "^7.1.9",
+    "@capacitor/ios": "^7.6.10",
+    "@capacitor/share": "^7.0.4"
+  }
+}
