@@ -5,6 +5,29 @@
 .install .itext{flex:1;min-width:0;font-size:13px;color:var(--muted);display:flex;flex-direction:column}
 .install .itext b{color:var(--ink);font-size:14px}
 .install .btn{height:34px;padding:0 14px;font-size:14px}
+
+/* photos */
+.pgrid{column-count:2;column-gap:8px}
+@media (min-width:640px){.pgrid{column-count:3}}
+.ph{break-inside:avoid;display:block;width:100%;margin:0 0 8px;padding:0;border:0;background:var(--sunk);border-radius:12px;overflow:hidden;position:relative}
+.ph img{display:block;width:100%;height:auto}
+.ph .dot{position:absolute;left:8px;bottom:8px;display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100% - 16px)}
+.ph .dot span{font-size:11px;color:#fff;background:rgba(0,0,0,.45);border-radius:6px;padding:1px 6px;backdrop-filter:blur(4px)}
+.previews{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.previews img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;max-width:100%}
+.pickbtn{display:flex;align-items:center;justify-content:center;gap:8px;height:96px;border:1.5px dashed var(--line);border-radius:14px;color:var(--muted);font-size:15px;background:var(--bg);width:100%}
+.viewer{position:fixed;inset:0;z-index:25;background:#0B0A0E;color:#F2F1F6;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.vtop{display:flex;align-items:center;justify-content:space-between;padding:8px max(12px,env(safe-area-inset-left,0px)) 8px max(12px,env(safe-area-inset-right,0px));font-size:14px;font-variant-numeric:tabular-nums}
+.vbtn{border:0;background:rgba(255,255,255,.12);color:#F2F1F6;height:36px;min-width:36px;padding:0 12px;border-radius:18px;font-size:14px}
+.vstage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;touch-action:pan-y}
+.vstage img{max-width:100%;max-height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+.vnav{position:absolute;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.14);color:#fff;width:40px;height:40px;border-radius:50%;font-size:18px}
+.vnav.l{left:max(10px,env(safe-area-inset-left,0px))} .vnav.r{right:max(10px,env(safe-area-inset-right,0px))}
+@media (hover:none){.vnav{display:none}}
+.vinfo{padding:10px max(16px,env(safe-area-inset-left,0px)) 12px max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:8px;max-height:32%;overflow-y:auto}
+.vinfo .vnote{font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+.vinfo .tag{background:rgba(255,92,130,.18);color:#FF8FA9}
+.vinfo .row{display:flex;gap:8px}
 </style></head><body>
 <title>灵感池</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -101,7 +124,7 @@ main{padding-block:6px calc(140px + env(safe-area-inset-bottom,0px))}
 
 /* tab bar + fab */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .inner{display:grid;grid-template-columns:repeat(3,1fr);max-width:760px;margin:0 auto}
+nav.tabs .inner{display:grid;grid-template-columns:repeat(4,1fr);max-width:760px;margin:0 auto}
 nav.tabs button{border:0;background:none;padding:8px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-selected="true"]{color:var(--ink);font-weight:600}
@@ -109,7 +132,7 @@ nav.tabs button[aria-selected="true"] svg{color:var(--accent)}
 .fab{position:fixed;z-index:7;right:max(18px,calc(env(safe-area-inset-right,0px) + 18px));bottom:calc(76px + env(safe-area-inset-bottom,0px));height:52px;padding:0 20px 0 16px;border-radius:26px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;box-shadow:0 6px 20px rgba(210,51,92,.35)}
 
 /* sheet */
-.scrim{position:fixed;inset:0;z-index:20;background:rgba(10,8,14,.45);display:flex;align-items:flex-end;justify-content:center}
+.scrim{position:fixed;inset:0;z-index:30;background:rgba(10,8,14,.45);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:640px;max-height:92%;overflow-y:auto;background:var(--surface);border-radius:20px 20px 0 0;padding-top:8px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
@@ -131,7 +154,7 @@ textarea.input{min-height:84px;resize:vertical}
 .pick{display:flex;flex-wrap:wrap;gap:6px}
 .addtag{display:flex;gap:6px;margin-top:8px}
 .addtag .input{flex:1;min-width:0;padding:8px 12px;font-size:15px}
-.toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;pointer-events:none}
+.toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;pointer-events:none}
 </style>
 
 <header class="gutter"><div class="wrap">
@@ -153,6 +176,7 @@ textarea.input{min-height:84px;resize:vertical}
 
 <nav class="tabs" role="tablist"><div class="inner">
   <button role="tab" data-tab="ideas" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="10" rx="2"/><rect x="13" y="3" width="8" height="6" rx="2"/><rect x="3" y="15" width="8" height="6" rx="2"/><rect x="13" y="11" width="8" height="10" rx="2"/></svg>灵感池</button>
+  <button role="tab" data-tab="photos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照灵感</button>
   <button role="tab" data-tab="titles" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h9"/></svg>爆款标题</button>
   <button role="tab" data-tab="creators" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>参考博主</button>
 </div></nav>
@@ -166,14 +190,16 @@ const PLAT = {xhs:"小红书", douyin:"抖音", ins:"Instagram", other:"其他"}
 const DEFAULT_TAGS = {
   ideas:["低粉爆款","POV系列","拍照灵感","可1:1模仿","健身","穿搭"],
   titles:["日常照","健身场景","忧郁","反差","干货"],
-  creators:["拍照","健身","穿搭","vlog"]
+  creators:["拍照","健身","穿搭","vlog"],
+  photos:["构图","姿势","光影","色调","穿搭","健身房","街拍"]
 };
 const TABMETA = {
   ideas:{h:"灵感池", add:"添加灵感", ph:"搜索标题、介绍、tag"},
   titles:{h:"爆款标题", add:"添加标题", ph:"搜索标题"},
-  creators:{h:"参考博主", add:"添加博主", ph:"搜索博主名、备注"}
+  creators:{h:"参考博主", add:"添加博主", ph:"搜索博主名、备注"},
+  photos:{h:"拍照灵感", add:"添加照片", ph:"搜索照片备注、tag"}
 };
-const state = { tab:"ideas", data:{ideas:[],titles:[],creators:[]}, filter:{ideas:{tag:null,q:""},titles:{tag:null,q:""},creators:{tag:null,plat:null,q:""}}, canWrite:false, mode:"loading" };
+const state = { tab:"ideas", data:{ideas:[],titles:[],creators:[],photos:[]}, filter:{photos:{tag:null,q:""},ideas:{tag:null,q:""},titles:{tag:null,q:""},creators:{tag:null,plat:null,q:""}}, canWrite:false, mode:"loading" };
 let db = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -230,7 +256,7 @@ async function boot(){
   try{ [db, user] = await Promise.all([use("db"), use("user")]); }catch(e){ db=null; }
   if (!db){ localMode(); return; }
   try{ state.canWrite = user ? !!(await user.isOwner()) : true; }catch(e){ state.canWrite = true; }
-  state.mode = "db";
+  state.mode = "db"; loadPhotos();
   const pending = new Set(COLS);
   const timer = setTimeout(()=>{ if(pending.size) setStatus("暂时连不上数据，显示的可能不是最新内容"); }, 10000);
   COLS.forEach(col=>{
@@ -242,8 +268,46 @@ async function boot(){
   });
   render();
 }
+/* ---------- photos: IndexedDB (big storage, stays on this device) ---------- */
+let idbP = null;
+function idb(){
+  if (!idbP) idbP = new Promise((res,rej)=>{
+    const r = indexedDB.open("inspo-pool", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("photos", {keyPath:"id"});
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+  return idbP;
+}
+async function idbDo(mode, fn){
+  const d = await idb();
+  return new Promise((res,rej)=>{ const tx = d.transaction("photos", mode); const st = tx.objectStore("photos"); let out; const rq = fn(st); if(rq) rq.onsuccess = () => out = rq.result; tx.oncomplete = () => res(out); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); });
+}
+function photoView(rec){ return {id:rec.id, note:rec.note||"", tags:rec.tags||[], createdAt:rec.createdAt, w:rec.w, h:rec.h, url:URL.createObjectURL(rec.blob), blob:rec.blob}; }
+async function loadPhotos(){
+  try{ const all = await idbDo("readonly", st=>st.getAll()); state.data.photos.forEach(p=>URL.revokeObjectURL(p.url)); state.data.photos = (all||[]).map(photoView); }
+  catch(e){ state.photoErr = true; }
+  render();
+}
+async function putPhoto(rec){ await idbDo("readwrite", st=>st.put(rec)); }
+async function delPhoto(id){ await idbDo("readwrite", st=>st.delete(id)); const p = state.data.photos.find(x=>x.id===id); if(p) URL.revokeObjectURL(p.url); state.data.photos = state.data.photos.filter(x=>x.id!==id); render(); }
+function compress(file){
+  return new Promise((res,rej)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const max = 1600, k = Math.min(1, max/Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth*k), h = Math.round(img.naturalHeight*k);
+      const c = document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res({blob:b,w,h}) : rej(new Error("encode")), "image/jpeg", 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("decode")); };
+    img.src = url;
+  });
+}
+function blobToDataURL(b){ return new Promise(r=>{ const f=new FileReader(); f.onload=()=>r(f.result); f.readAsDataURL(b); }); }
+
 function localMode(){
-  state.mode="local"; state.canWrite=true; loadLocal();
+  state.mode="local"; state.canWrite=true; loadLocal(); loadPhotos();
   setStatus("数据只存在这台设备的浏览器里，记得偶尔点「备份」导出一份");
   $("#backupBtn").hidden = false;
   render();
@@ -291,7 +355,8 @@ function renderRail(){
 function render(){
   const col = state.tab, meta = TABMETA[col], items = filtered(col);
   $("#h1").textContent = meta.h;
-  $("#count").textContent = items.length===state.data[col].length ? `${items.length} 条` : `${items.length} / ${state.data[col].length} 条`;
+  const unit = col==="photos" ? "张" : "条";
+  $("#count").textContent = items.length===state.data[col].length ? `${items.length} ${unit}` : `${items.length} / ${state.data[col].length} ${unit}`;
   $("#q").placeholder = meta.ph;
   if ($("#q").value !== state.filter[col].q) $("#q").value = state.filter[col].q;
   $("#fabtxt").textContent = meta.add;
@@ -302,7 +367,15 @@ function render(){
   if (state.mode==="loading"){ v.innerHTML = `<div class="empty">加载中…</div>`; return; }
   if (!items.length){
     const none = !state.data[col].length;
-    v.innerHTML = `<div class="empty"><b>${none?"还是空的":"没有匹配的内容"}</b>${none?{ideas:"把小红书 / 抖音 / ins 的分享链接整段粘贴进来，自动识别平台和标题",titles:"刷到有流量的标题就复制进来，一次可以粘贴多行",creators:"记下值得参考的博主和主页链接"}[col]:"换个关键词或清除 tag 筛选"}</div>`;
+    v.innerHTML = `<div class="empty"><b>${none?"还是空的":"没有匹配的内容"}</b>${none?{ideas:"把小红书 / 抖音 / ins 的分享链接整段粘贴进来，自动识别平台和标题",titles:"刷到有流量的标题就复制进来，一次可以粘贴多行",creators:"记下值得参考的博主和主页链接",photos:"把喜欢的照片存进来，拍照前翻一翻找构图和姿势"}[col]:"换个关键词或清除 tag 筛选"}</div>`;
+    return;
+  }
+  if (col==="photos"){
+    v.innerHTML = `<div class="pgrid">${items.map(it=>`
+      <button class="ph" data-photo="${it.id}" aria-label="${esc(it.note||"照片")}">
+        <img src="${it.url}" alt="" loading="lazy" ${it.w?`width="${it.w}" height="${it.h}"`:""}>
+        ${(it.tags&&it.tags.length)?`<span class="dot">${it.tags.slice(0,2).map(t=>`<span>#${esc(t)}</span>`).join("")}</span>`:""}
+      </button>`).join("")}</div>`;
     return;
   }
   if (col==="ideas"){
@@ -402,6 +475,7 @@ function bindSeg(s, init){
 }
 
 function form(col, item){
+  if (col==="photos") return photoForm(item);
   const editing = !!item, it = item || {};
   let html = "";
   if (col==="ideas"){
@@ -524,6 +598,7 @@ $("#rail").addEventListener("click", e=>{
   render();
 });
 $("#view").addEventListener("click", e=>{
+  const ph = e.target.closest("[data-photo]"); if(ph){ openViewer(ph.dataset.photo); return; }
   const o = e.target.closest("[data-open]"); if(o){ ideaDetail(o.dataset.open); return; }
   const c = e.target.closest("[data-copy]");
   if(c){ const it=find("titles",c.dataset.copy); const txt=c.closest(".trow").querySelector(".text");
@@ -532,18 +607,110 @@ $("#view").addEventListener("click", e=>{
 });
 $("#fab").addEventListener("click", ()=>form(state.tab));
 
+/* ---------- photo form & viewer ---------- */
+function photoForm(item){
+  const editing = !!item, it = item || {};
+  let files = [];
+  openSheet(`
+    <h2>${editing?"编辑照片":"添加照片"}</h2>
+    <form id="f">
+      ${editing?`<div class="previews" style="grid-template-columns:1fr 2fr"><img src="${it.url}" alt=""></div>`:`
+      <input type="file" id="pf" accept="image/*" multiple hidden>
+      <button type="button" class="pickbtn" id="pickbtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>从相册选照片（可多选）</button>
+      <div class="previews" id="pv"></div>`}
+      <label class="f" for="fi-note">备注</label>
+      <textarea class="input" id="fi-note" placeholder="比如：侧身 45°，手放口袋，低机位往上拍">${esc(it.note||"")}</textarea>
+      <label class="f">Tag</label><div id="tp"></div>
+      <div class="actions"><button class="btn primary grow" type="submit" id="savebtn">${editing?"保存":"添加"}</button>${editing?`<button class="btn danger" type="button" id="del">删除</button>`:""}</div>
+    </form>`, s=>{
+    const tp = tagPicker("photos", it.tags); s.querySelector("#tp").appendChild(tp.el);
+    if (!editing){
+      const inp = s.querySelector("#pf"), pv = s.querySelector("#pv");
+      s.querySelector("#pickbtn").addEventListener("click", ()=>inp.click());
+      inp.addEventListener("change", ()=>{
+        files = files.concat([...inp.files]); inp.value = "";
+        pv.innerHTML = ""; files.forEach(f=>{ const im=document.createElement("img"); im.src=URL.createObjectURL(f); im.onload=()=>URL.revokeObjectURL(im.src); pv.appendChild(im); });
+        s.querySelector("#pickbtn").lastChild.textContent = `已选 ${files.length} 张，点这里继续加`;
+      });
+    }
+    armDelete(s.querySelector("#del"), async ()=>{ closeSheet(); closeViewer(); try{ await delPhoto(it.id); toast("已删除"); }catch(e){ toast("删除失败，请重试"); } });
+    s.querySelector("#f").addEventListener("submit", async e=>{
+      e.preventDefault();
+      const note = s.querySelector("#fi-note").value.trim(), tags = tp.get();
+      if (editing){
+        try{ await putPhoto({id:it.id, blob:it.blob, w:it.w, h:it.h, createdAt:it.createdAt, note, tags}); it.note=note; it.tags=tags; closeSheet(); render(); if(viewerState) showViewer(); toast("已保存"); }
+        catch(err){ toast("保存失败，请重试"); }
+        return;
+      }
+      if (!files.length){ toast("先选照片"); return; }
+      const btn = s.querySelector("#savebtn"); btn.disabled = true;
+      try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+      let ok = 0, bad = 0, i = 0;
+      for (const f of files){
+        btn.textContent = `处理中 ${++i}/${files.length}`;
+        try{
+          const {blob,w,h} = await compress(f);
+          const rec = {id:uid(), blob, w, h, note, tags, createdAt:Date.now()+i};
+          await putPhoto(rec); state.data.photos.push(photoView(rec)); ok++;
+        }catch(err){ bad++; if (err && err.name==="QuotaExceededError"){ toast("手机存储空间不够了"); break; } }
+      }
+      closeSheet(); render();
+      toast(bad ? `已添加 ${ok} 张，${bad} 张读不出来` : `已添加 ${ok} 张`);
+    });
+  });
+}
+
+let viewerState = null;
+function openViewer(id){
+  const list = filtered("photos"); const i = list.findIndex(x=>x.id===id); if (i<0) return;
+  viewerState = {list, i}; showViewer();
+}
+function closeViewer(){ viewerState = null; const v = document.getElementById("viewer"); if(v) v.remove(); document.body.style.overflow=""; }
+function showViewer(){
+  if (!viewerState) return;
+  const {list} = viewerState; const it = list[viewerState.i]; if(!it){ closeViewer(); return; }
+  let v = document.getElementById("viewer");
+  if (!v){ v = document.createElement("div"); v.id="viewer"; v.className="viewer"; v.setAttribute("role","dialog"); v.setAttribute("aria-modal","true"); document.body.appendChild(v); }
+  document.body.style.overflow="hidden";
+  v.innerHTML = `
+    <div class="vtop"><button class="vbtn" data-v="close" aria-label="关闭">✕</button><span>${viewerState.i+1} / ${list.length}</span>${state.canWrite?`<button class="vbtn" data-v="edit">编辑</button>`:"<span></span>"}</div>
+    <div class="vstage"><img src="${it.url}" alt="${esc(it.note||"")}">
+      ${list.length>1?`<button class="vnav l" data-v="prev" aria-label="上一张">‹</button><button class="vnav r" data-v="next" aria-label="下一张">›</button>`:""}</div>
+    ${(it.note||(it.tags&&it.tags.length))?`<div class="vinfo">${it.note?`<div class="vnote">${esc(it.note)}</div>`:""}${tagsHTML(it.tags)}</div>`:""}`;
+}
+function step(d){ if(!viewerState) return; const n = viewerState.list.length; viewerState.i = (viewerState.i + d + n) % n; showViewer(); }
+document.addEventListener("click", e=>{
+  const b = e.target.closest("#viewer [data-v]"); if(!b) return;
+  const a = b.dataset.v;
+  if (a==="close") closeViewer(); else if (a==="prev") step(-1); else if (a==="next") step(1);
+  else if (a==="edit"){ const it = viewerState.list[viewerState.i]; photoForm(state.data.photos.find(x=>x.id===it.id)); }
+});
+let tx0 = null, ty0 = null;
+document.addEventListener("touchstart", e=>{ if(!e.target.closest("#viewer .vstage")) return; tx0 = e.touches[0].clientX; ty0 = e.touches[0].clientY; }, {passive:true});
+document.addEventListener("touchend", e=>{
+  if (tx0===null) return; const dx = e.changedTouches[0].clientX - tx0, dy = e.changedTouches[0].clientY - ty0; tx0 = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) step(dx < 0 ? 1 : -1);
+  else if (dy > 90 && Math.abs(dy) > Math.abs(dx)) closeViewer();
+}, {passive:true});
+document.addEventListener("keydown", e=>{ if(!viewerState || document.querySelector("#scrim")) return; if(e.key==="ArrowRight") step(1); else if(e.key==="ArrowLeft") step(-1); else if(e.key==="Escape") closeViewer(); });
+
 /* ---------- backup (local mode) ---------- */
 $("#backupBtn").addEventListener("click", ()=>{
-  const n = COLS.reduce((s,c)=>s+state.data[c].length,0);
+  const n = COLS.reduce((s,c)=>s+state.data[c].length,0), np = state.data.photos.length;
   openSheet(`
     <h2>备份与恢复</h2>
-    <div class="hint" style="font-size:14px">当前共 ${n} 条。数据只存在这个浏览器里，清缓存或换手机前先导出一份。</div>
+    <div class="hint" style="font-size:14px">当前共 ${n} 条记录、${np} 张照片。数据只存在这个浏览器里，清缓存或换手机前先导出一份。</div>
     <div class="actions"><button class="btn primary grow" id="exp">导出备份文件</button></div>
     <label class="f" for="impfile">从备份文件恢复（会和现有内容合并，重复的不会加两次）</label>
     <input type="file" id="impfile" accept=".json,application/json" class="input">
   `, s=>{
-    s.querySelector("#exp").addEventListener("click", ()=>{
-      const blob = new Blob([JSON.stringify({app:"inspo-pool",v:1,exportedAt:new Date().toISOString(),...state.data},null,2)],{type:"application/json"});
+    s.querySelector("#exp").addEventListener("click", async ()=>{
+      const eb = s.querySelector("#exp"); eb.disabled = true; eb.textContent = "正在打包…";
+      const photos = [];
+      for (const p of state.data.photos) photos.push({id:p.id, note:p.note, tags:p.tags, createdAt:p.createdAt, w:p.w, h:p.h, data: await blobToDataURL(p.blob)});
+      const out = {app:"inspo-pool",v:2,exportedAt:new Date().toISOString(),photos}; COLS.forEach(c=>out[c]=state.data[c]);
+      const blob = new Blob([JSON.stringify(out)],{type:"application/json"});
+      eb.disabled = false; eb.textContent = "导出备份文件";
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `灵感池备份-${new Date().toISOString().slice(0,10)}.json`;
@@ -554,9 +721,16 @@ $("#backupBtn").addEventListener("click", ()=>{
     s.querySelector("#impfile").addEventListener("change", e=>{
       const file = e.target.files[0]; if(!file) return;
       const r = new FileReader();
-      r.onload = () => {
+      r.onload = async () => {
         try{
           const j = JSON.parse(r.result); let added = 0;
+          if (Array.isArray(j.photos)){
+            const have = new Set(state.data.photos.map(x=>x.id));
+            for (const x of j.photos){
+              if (!x || !x.data || have.has(x.id)) continue;
+              try{ const blob = await (await fetch(x.data)).blob(); const rec = {id:x.id||uid(), blob, w:x.w, h:x.h, note:x.note||"", tags:x.tags||[], createdAt:x.createdAt||Date.now()}; await putPhoto(rec); state.data.photos.push(photoView(rec)); added++; }catch(e){}
+            }
+          }
           COLS.forEach(c=>{
             if(!Array.isArray(j[c])) return;
             const have = new Set(state.data[c].map(x=>x.id));
