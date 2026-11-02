@@ -163,6 +163,19 @@ textarea.input{min-height:84px;resize:vertical}
 .addtag{display:flex;gap:6px;margin-top:8px}
 .addtag .input{flex:1;min-width:0;padding:8px 12px;font-size:16px}
 .toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;pointer-events:none}
+.chip.ghost{background:transparent;border-style:dashed;color:var(--muted)}
+.pick.editing .chip[data-t]{border-color:var(--xhs);color:var(--xhs);background:var(--surface)}
+.pick.editing .chip[data-t].armed{background:var(--xhs);color:#fff}
+.chip .x{margin-left:6px;font-size:11px}
+.tmlist{display:flex;flex-direction:column;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tmrow{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-top:1px solid var(--line)}
+.tmrow:first-child{border-top:0}
+.tmname{flex:1;min-width:0;overflow-wrap:anywhere}
+.tmn{font-size:12px;color:var(--muted);white-space:nowrap}
+.tmdel{height:34px;padding:0 12px;font-size:13px}
+.okline{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border-radius:12px;padding:12px;font-size:14px;margin-top:6px}
+.okline .dotok{flex:none;width:10px;height:10px;border-radius:50%;background:#2E9D6A;margin-top:6px}
+.okline .dotok.bad{background:var(--xhs)}
 </style>
 
 <header class="gutter"><div class="wrap">
@@ -208,7 +221,7 @@ const TABMETA = {
   creators:{h:"参考博主", add:"添加博主", ph:"搜索博主名、备注"},
   photos:{h:"拍照灵感", add:"添加照片", ph:"搜索照片备注、tag"}
 };
-const state = { tab:"ideas", data:{ideas:[],titles:[],creators:[],photos:[]}, filter:{photos:{tag:null,q:""},ideas:{tag:null,q:""},titles:{tag:null,q:""},creators:{tag:null,plat:null,q:""}}, canWrite:false, mode:"loading" };
+const state = { tab:"ideas", data:{ideas:[],titles:[],creators:[],photos:[]}, filter:{photos:{tag:null,q:""},ideas:{tag:null,q:""},titles:{tag:null,q:""},creators:{tag:null,plat:null,q:""}}, canWrite:false, mode:"loading", hidden:{ideas:[],titles:[],creators:[],photos:[]} };
 let db = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -235,8 +248,11 @@ function normUrl(u){ u=(u||"").trim(); if(u && !/^https?:\/\//i.test(u)) u="http
 
 /* ---------- storage ---------- */
 const LKEY = "inspo-pool-local-v1";
-function loadLocal(){ try{ const j = JSON.parse(localStorage.getItem(LKEY)||"null"); if(j) COLS.forEach(c=> state.data[c]=j[c]||[]);}catch(e){} }
-function saveLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(state.data)); }catch(e){} }
+function loadLocal(){ try{ const j = JSON.parse(localStorage.getItem(LKEY)||"null"); if(j){ COLS.forEach(c=> state.data[c]=j[c]||[]); if(j.hidden) Object.assign(state.hidden, j.hidden); } }catch(e){} }
+function saveLocal(){
+  try{ const o = {hidden:state.hidden}; COLS.forEach(c=>o[c]=state.data[c]); localStorage.setItem(LKEY, JSON.stringify(o)); }catch(e){}
+  mirrorSoon();
+}
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 
 async function addItem(col, obj){
@@ -298,7 +314,8 @@ async function loadPhotos(){
   render();
 }
 async function putPhoto(rec){ await idbDo("readwrite", st=>st.put(rec)); }
-async function delPhoto(id){ await idbDo("readwrite", st=>st.delete(id)); const p = state.data.photos.find(x=>x.id===id); if(p) URL.revokeObjectURL(p.url); state.data.photos = state.data.photos.filter(x=>x.id!==id); render(); }
+async function addPhotoRec(rec){ await putPhoto(rec); state.data.photos.push(photoView(rec)); await mirrorPhoto(rec); mirrorSoon(); }
+async function delPhoto(id){ await idbDo("readwrite", st=>st.delete(id)); unmirrorPhoto(id); mirrorSoon(); const p = state.data.photos.find(x=>x.id===id); if(p) URL.revokeObjectURL(p.url); state.data.photos = state.data.photos.filter(x=>x.id!==id); render(); }
 function compress(file){
   return new Promise((res,rej)=>{
     const url = URL.createObjectURL(file), img = new Image();
@@ -315,11 +332,62 @@ function compress(file){
 }
 function blobToDataURL(b){ return new Promise(r=>{ const f=new FileReader(); f.onload=()=>r(f.result); f.readAsDataURL(b); }); }
 
-function localMode(){
-  state.mode="local"; state.canWrite=true; loadLocal(); loadPhotos();
+/* ---------- auto-backup (iPhone app): mirror everything into the app's Documents folder ----------
+   Shows up in Files → On My iPhone → 灵感池, rides along with iCloud device backup,
+   and is read back automatically if the app's web storage ever comes up empty. */
+const FS = NATIVE ? (window.Capacitor.Plugins||{}).Filesystem : null;
+const DOCS = "DOCUMENTS";
+let mirrorT = null, lastMirror = null, mirrorOK = !!FS;
+function mirrorSoon(){ if(!FS || state.restoring) return; clearTimeout(mirrorT); mirrorT = setTimeout(mirrorText, 600); }
+function snapshot(){
+  const o = {app:"inspo-pool", v:3, savedAt:new Date().toISOString(), hidden:state.hidden,
+    photos: state.data.photos.map(p=>({id:p.id, note:p.note, tags:p.tags, createdAt:p.createdAt, w:p.w, h:p.h}))};
+  COLS.forEach(c=>o[c]=state.data[c]); return o;
+}
+async function mirrorText(){
+  if(!FS) return;
+  try{ await FS.writeFile({path:"data.json", data:JSON.stringify(snapshot()), directory:DOCS, encoding:"utf8"}); lastMirror = new Date(); mirrorOK = true; }
+  catch(e){ mirrorOK = false; }
+}
+async function mirrorPhoto(rec){
+  if(!FS) return;
+  try{ const d = await blobToDataURL(rec.blob); await FS.writeFile({path:`photos/${rec.id}.jpg`, data:d.slice(d.indexOf(",")+1), directory:DOCS, recursive:true}); }
+  catch(e){ mirrorOK = false; }
+}
+async function unmirrorPhoto(id){ if(FS) try{ await FS.deleteFile({path:`photos/${id}.jpg`, directory:DOCS}); }catch(e){} }
+async function restoreFromMirror(){
+  let j; try{ j = JSON.parse((await FS.readFile({path:"data.json", directory:DOCS, encoding:"utf8"})).data); }catch(e){ return false; }
+  state.restoring = true;
+  COLS.forEach(c=>{ if(Array.isArray(j[c])) state.data[c]=j[c]; });
+  if (j.hidden) Object.assign(state.hidden, j.hidden);
+  for (const m of (j.photos||[])){
+    try{
+      const r = await FS.readFile({path:`photos/${m.id}.jpg`, directory:DOCS});
+      const blob = await (await fetch("data:image/jpeg;base64,"+r.data)).blob();
+      const rec = {id:m.id, blob, w:m.w, h:m.h, note:m.note||"", tags:m.tags||[], createdAt:m.createdAt||Date.now()};
+      await putPhoto(rec); state.data.photos.push(photoView(rec));
+    }catch(e){}
+  }
+  state.restoring = false; saveLocal(); render();
+  return true;
+}
+async function syncMirror(){
+  const empty = COLS.every(c=>!state.data[c].length) && !state.data.photos.length;
+  if (empty){ if (await restoreFromMirror()) toast("已从自动备份恢复"); return; }
+  await mirrorText();
+  let have = new Set();
+  try{ have = new Set(((await FS.readdir({path:"photos", directory:DOCS})).files||[]).map(f=>(typeof f==="string"?f:f.name).replace(/\.jpg$/,""))); }catch(e){}
+  for (const p of state.data.photos) if (!have.has(p.id)) await mirrorPhoto(p);
+}
+
+async function localMode(){
+  state.mode="local"; state.canWrite=true; loadLocal();
   setStatus(NATIVE ? "" : "数据只存在这台设备的浏览器里，记得偶尔点「备份」导出一份");
   $("#backupBtn").hidden = false;
+  if (!NATIVE) try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
   render();
+  await loadPhotos();
+  if (FS) syncMirror();
 }
 function setStatus(t){ $("#status").textContent = t; }
 
@@ -331,7 +399,7 @@ function tagCounts(col){
 }
 function allTags(col){
   const s = new Set(tagCounts(col).map(x=>x[0]));
-  DEFAULT_TAGS[col].forEach(t=>s.add(t));
+  DEFAULT_TAGS[col].forEach(t=>{ if(!state.hidden[col].includes(t)) s.add(t); });
   return [...s];
 }
 function filtered(col){
@@ -341,6 +409,40 @@ function filtered(col){
     .filter(it => !f.plat || it.platform===f.plat)
     .filter(it => !q || [it.title,it.text,it.note,it.name,it.comment,(it.tags||[]).join(" ")].join(" ").toLowerCase().includes(q))
     .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+}
+
+function tagUse(col, tag){ return state.data[col].filter(it=>(it.tags||[]).includes(tag)).length; }
+async function deleteTag(col, tag){
+  if (DEFAULT_TAGS[col].includes(tag) && !state.hidden[col].includes(tag)) state.hidden[col].push(tag);
+  const hit = state.data[col].filter(it=>(it.tags||[]).includes(tag));
+  if (state.filter[col].tag===tag) state.filter[col].tag = null;
+  if (col==="photos"){
+    for (const p of hit){ p.tags = p.tags.filter(t=>t!==tag); try{ await putPhoto({id:p.id, blob:p.blob, w:p.w, h:p.h, createdAt:p.createdAt, note:p.note, tags:p.tags}); }catch(e){} }
+  } else if (db){
+    for (const it of hit) await saveItem(col, it.id, {...strip(it), tags:it.tags.filter(t=>t!==tag)});
+  } else {
+    hit.forEach(it=>{ it.tags = it.tags.filter(t=>t!==tag); });
+  }
+  saveLocal(); render();
+}
+function unhideTag(col, tag){ const i = state.hidden[col].indexOf(tag); if(i>-1){ state.hidden[col].splice(i,1); saveLocal(); } }
+
+function tagManager(col){
+  const drawRows = () => allTags(col).map(t=>{ const n = tagUse(col,t);
+    return `<div class="tmrow"><span class="tmname">#${esc(t)}</span><span class="tmn">${n ? `${n} 条在用` : "未使用"}</span><button type="button" class="btn danger tmdel" data-del="${esc(t)}" data-n="${n}">删除</button></div>`; }).join("") || `<div class="hint" style="padding:12px">还没有 tag</div>`;
+  openSheet(`<h2>管理 tag · ${TABMETA[col].h}</h2>
+    <div class="hint" style="font-size:14px">删除后，这个 tag 会从所有内容上去掉，内容本身不会删。</div>
+    <div class="tmlist" id="tml">${drawRows()}</div>
+    <div class="actions"><button class="btn grow" id="tmdone">完成</button></div>`, s=>{
+    s.querySelector("#tmdone").addEventListener("click", closeSheet);
+    s.querySelector("#tml").addEventListener("click", async e=>{
+      const b = e.target.closest("[data-del]"); if(!b) return;
+      const n = +b.dataset.n;
+      if (n && !b.classList.contains("armed")){ b.classList.add("armed"); b.textContent = `从 ${n} 条移除`; setTimeout(()=>{ if(b.isConnected){ b.classList.remove("armed"); b.textContent="删除"; } }, 3000); return; }
+      await deleteTag(col, b.dataset.del); toast(`已删除 #${b.dataset.del}`);
+      s.querySelector("#tml").innerHTML = drawRows();
+    });
+  });
 }
 
 /* ---------- render ---------- */
@@ -358,6 +460,7 @@ function renderRail(){
     if (tc.length) h += `<span class="sep"></span>`;
   }
   tc.forEach(([t,n])=> h += `<button class="chip" data-tag="${esc(t)}" aria-pressed="${f.tag===t}">#${esc(t)}<span class="n">${n}</span></button>`);
+  if (state.canWrite) h += `<button class="chip ghost" data-manage="1">管理 tag</button>`;
   $("#rail").innerHTML = h;
 }
 
@@ -458,13 +561,23 @@ function armDelete(btn, fn){
 function tagPicker(col, selected){
   const sel = new Set(selected||[]);
   const wrap = document.createElement("div");
+  let editing = false;
   const draw = () => {
     const tags = allTags(col); sel.forEach(t=>{ if(!tags.includes(t)) tags.push(t); });
-    wrap.innerHTML = `<div class="pick">${tags.map(t=>`<button type="button" class="chip" data-t="${esc(t)}" aria-pressed="${sel.has(t)}">#${esc(t)}</button>`).join("")}</div>
-      <div class="addtag"><input class="input" id="newtag-${col}" placeholder="新 tag，比如：氛围感" maxlength="20"><button type="button" class="btn" id="addtagbtn">加上</button></div>`;
-    wrap.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.t; sel.has(t)?sel.delete(t):sel.add(t); b.setAttribute("aria-pressed", sel.has(t)); }));
+    wrap.innerHTML = `<div class="pick${editing?" editing":""}">${tags.map(t=>`<button type="button" class="chip" data-t="${esc(t)}" aria-pressed="${!editing && sel.has(t)}"><span class="lbl">#${esc(t)}</span>${editing?`<span class="x" aria-hidden="true">✕</span>`:""}</button>`).join("")}
+        <button type="button" class="chip ghost" id="tagedit">${editing?"完成":"删除 tag"}</button></div>
+      ${editing?`<div class="hint">点 ✕ 删除。正在使用的 tag 要再点一次确认，会从所有内容上移除。</div>`:`<div class="addtag"><input class="input" id="newtag-${col}" placeholder="新 tag，比如：氛围感" maxlength="20"><button type="button" class="btn" id="addtagbtn">加上</button></div>`}`;
+    wrap.querySelector("#tagedit").addEventListener("click", ()=>{ editing = !editing; draw(); });
+    wrap.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click", async ()=>{
+      const t = b.dataset.t;
+      if (!editing){ sel.has(t)?sel.delete(t):sel.add(t); b.setAttribute("aria-pressed", sel.has(t)); return; }
+      const n = tagUse(col, t);
+      if (n && !b.classList.contains("armed")){ b.classList.add("armed"); b.querySelector(".lbl").textContent = `#${t} · ${n} 条在用，确认？`; return; }
+      sel.delete(t); await deleteTag(col, t); toast(`已删除 #${t}`); draw();
+    }));
+    if (editing) return;
     const inp = wrap.querySelector("input");
-    const add = () => { const t = inp.value.trim().replace(/^#/,""); if(t){ sel.add(t); draw(); wrap.querySelector("input").focus(); } };
+    const add = () => { const t = inp.value.trim().replace(/^#/,""); if(t){ sel.add(t); unhideTag(col, t); draw(); wrap.querySelector("input").focus(); } };
     wrap.querySelector("#addtagbtn").addEventListener("click", add);
     inp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); add(); } });
   };
@@ -600,6 +713,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 $("#q").addEventListener("input", e=>{ state.filter[state.tab].q = e.target.value; render(); });
 $("#rail").addEventListener("click", e=>{
   const b = e.target.closest(".chip"); if(!b) return;
+  if (b.dataset.manage){ tagManager(state.tab); return; }
   const f = state.filter[state.tab];
   if (b.dataset.plat){ f.plat = f.plat===b.dataset.plat ? null : b.dataset.plat; }
   else if (b.dataset.tag===""){ f.tag=null; if("plat" in f) f.plat=null; }
@@ -647,7 +761,7 @@ function photoForm(item){
       e.preventDefault();
       const note = s.querySelector("#fi-note").value.trim(), tags = tp.get();
       if (editing){
-        try{ await putPhoto({id:it.id, blob:it.blob, w:it.w, h:it.h, createdAt:it.createdAt, note, tags}); it.note=note; it.tags=tags; closeSheet(); render(); if(viewerState) showViewer(); toast("已保存"); }
+        try{ await putPhoto({id:it.id, blob:it.blob, w:it.w, h:it.h, createdAt:it.createdAt, note, tags}); it.note=note; it.tags=tags; mirrorSoon(); closeSheet(); render(); if(viewerState) showViewer(); toast("已保存"); }
         catch(err){ toast("保存失败，请重试"); }
         return;
       }
@@ -660,7 +774,7 @@ function photoForm(item){
         try{
           const {blob,w,h} = await compress(f);
           const rec = {id:uid(), blob, w, h, note, tags, createdAt:Date.now()+i};
-          await putPhoto(rec); state.data.photos.push(photoView(rec)); ok++;
+          await addPhotoRec(rec); ok++;
         }catch(err){ bad++; if (err && err.name==="QuotaExceededError"){ toast("手机存储空间不够了"); break; } }
       }
       closeSheet(); render();
@@ -708,8 +822,11 @@ $("#backupBtn").addEventListener("click", ()=>{
   const n = COLS.reduce((s,c)=>s+state.data[c].length,0), np = state.data.photos.length;
   openSheet(`
     <h2>备份与恢复</h2>
-    <div class="hint" style="font-size:14px">当前共 ${n} 条记录、${np} 张照片。${NATIVE?"数据存在这台 iPhone 上，换手机或删 app 前先导出一份（可以存到「文件」或 iCloud）。":"数据只存在这个浏览器里，清缓存或换手机前先导出一份。"}</div>
-    <div class="actions"><button class="btn primary grow" id="exp">导出备份文件</button></div>
+    ${FS?`<div class="okline"><span class="dotok${mirrorOK?"":" bad"}"></span><div><b>${mirrorOK?"自动备份已开启":"自动备份暂时失败，下次改动会再试"}</b><br>
+      每次改动都会自动存一份到「文件」App → 我的 iPhone → 灵感池，iPhone 的 iCloud 备份也会带上它。app 里的数据万一丢了，打开时会自动从这里恢复，不用你操作。${lastMirror?`<br><span style="color:var(--muted)">上次保存 ${lastMirror.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})}</span>`:""}</div></div>
+      <div class="hint" style="font-size:13px">删除 app 会连这份备份一起删掉。7 天过期打不开时，在 Xcode 里重新点 ▶ 就行，不要删 app。换新手机前，导出一份完整备份存到 iCloud 云盘。</div>`
+    :`<div class="hint" style="font-size:14px">当前共 ${n} 条记录、${np} 张照片。数据只存在这个浏览器里，清缓存或换手机前先导出一份。</div>`}
+    <div class="actions"><button class="btn ${FS?"":"primary "}grow" id="exp">导出完整备份文件</button></div>
     <label class="f" for="impfile">从备份文件恢复（会和现有内容合并，重复的不会加两次）</label>
     <input type="file" id="impfile" accept=".json,application/json" class="input">
   `, s=>{
@@ -719,7 +836,7 @@ $("#backupBtn").addEventListener("click", ()=>{
       for (const p of state.data.photos) photos.push({id:p.id, note:p.note, tags:p.tags, createdAt:p.createdAt, w:p.w, h:p.h, data: await blobToDataURL(p.blob)});
       const out = {app:"inspo-pool",v:2,exportedAt:new Date().toISOString(),photos}; COLS.forEach(c=>out[c]=state.data[c]);
       const json = JSON.stringify(out), fname = `灵感池备份-${new Date().toISOString().slice(0,10)}.json`;
-      eb.disabled = false; eb.textContent = "导出备份文件";
+      eb.disabled = false; eb.textContent = "导出完整备份文件";
       if (NATIVE){
         try{
           const {Filesystem, Share} = window.Capacitor.Plugins;
@@ -746,9 +863,10 @@ $("#backupBtn").addEventListener("click", ()=>{
             const have = new Set(state.data.photos.map(x=>x.id));
             for (const x of j.photos){
               if (!x || !x.data || have.has(x.id)) continue;
-              try{ const blob = await (await fetch(x.data)).blob(); const rec = {id:x.id||uid(), blob, w:x.w, h:x.h, note:x.note||"", tags:x.tags||[], createdAt:x.createdAt||Date.now()}; await putPhoto(rec); state.data.photos.push(photoView(rec)); added++; }catch(e){}
+              try{ const blob = await (await fetch(x.data)).blob(); const rec = {id:x.id||uid(), blob, w:x.w, h:x.h, note:x.note||"", tags:x.tags||[], createdAt:x.createdAt||Date.now()}; await addPhotoRec(rec); added++; }catch(e){}
             }
           }
+          if (j.hidden) COLS.concat("photos").forEach(c=>{ (j.hidden[c]||[]).forEach(t=>{ if(!state.hidden[c].includes(t)) state.hidden[c].push(t); }); });
           COLS.forEach(c=>{
             if(!Array.isArray(j[c])) return;
             const have = new Set(state.data[c].map(x=>x.id));

@@ -36,6 +36,8 @@
 5. Xcode 顶部设备选你的 iPhone，点 ▶ 运行。
 6. 第一次打开会提示不受信任：iPhone **设置 → 通用 → VPN 与设备管理**，点你的 Apple ID → 信任。
 
+**数据自动备份**：app 每次改动都会把数据和照片存一份到「文件」App → 我的 iPhone → 灵感池，并随 iPhone 的 iCloud 备份。app 内数据万一丢失，打开时会自动从这里恢复。删除 app 会连这份备份一起删，所以过期了重新安装即可，不要删 app。
+
 **免费 Apple ID 每 7 天会过期**：到期后 app 打不开，连上 Mac 在 Xcode 里再点一次 ▶ 就好，数据不会丢。开通 Apple Developer（99 美元/年）后一次安装可用一年。
 
 **改了页面之后更新 app**：`git pull && npm run sync`，再在 Xcode 点 ▶。
