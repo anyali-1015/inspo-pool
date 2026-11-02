@@ -213,6 +213,30 @@ img.ith{padding-top:0}
 .it3{display:flex;align-items:center;gap:8px;min-width:0}
 .idom{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .iopen{flex:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center;font-size:15px}
+.tbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.tbimp{height:36px;font-size:14px;padding:0 14px;border-style:dashed;background:var(--surface)}
+.tsort button{width:auto;padding:0 10px;font-size:13px}
+.tmeta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted);margin:2px 0 4px}
+.tmeta a{color:var(--muted);text-decoration:none}
+.lk{color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.steps{display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.step{display:flex;gap:10px;align-items:flex-start}
+.step b{font-size:14px}
+.sn{flex:none;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.bmrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.bm{display:inline-flex;align-items:center;height:38px;padding:0 14px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none;cursor:grab}
+.bmrow .btn{height:38px;font-size:14px}
+.impbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin:12px 0 8px;font-size:14px}
+.impq{display:flex;gap:6px;flex-wrap:wrap}
+.implist{max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;overscroll-behavior:contain}
+.improw{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}
+.improw:first-child{border-top:0}
+.improw input{margin-top:3px;flex:none;width:18px;height:18px;accent-color:var(--accent)}
+.improw .imt{flex:1;min-width:0;overflow-wrap:anywhere}
+.improw.dup{opacity:.55}
+.improw em{font-style:normal;font-size:12px;color:var(--muted)}
+.addc{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:14px}
+.addc input{width:18px;height:18px;accent-color:var(--accent)}
 </style>
 
 <header class="gutter"><div class="wrap">
@@ -258,7 +282,7 @@ const TABMETA = {
   creators:{h:"参考博主", add:"添加博主", ph:"搜索博主名、备注"},
   photos:{h:"拍照灵感", add:"添加照片", ph:"搜索照片备注、tag"}
 };
-const state = { tab:"ideas", data:{ideas:[],titles:[],creators:[],photos:[]}, filter:{photos:{tag:null,q:""},ideas:{tag:null,q:""},titles:{tag:null,q:""},creators:{tag:null,plat:null,q:""}}, canWrite:false, mode:"loading", ideaView:(()=>{ try{ return localStorage.getItem("inspo-idea-view")||"grid"; }catch(e){ return "grid"; } })(), hidden:{ideas:[],titles:[],creators:[],photos:[]} };
+const state = { tab:"ideas", data:{ideas:[],titles:[],creators:[],photos:[]}, filter:{photos:{tag:null,q:""},ideas:{tag:null,q:""},titles:{tag:null,q:""},creators:{tag:null,plat:null,q:""}}, canWrite:false, mode:"loading", titleSort:"new", ideaView:(()=>{ try{ return localStorage.getItem("inspo-idea-view")||"grid"; }catch(e){ return "grid"; } })(), hidden:{ideas:[],titles:[],creators:[],photos:[]} };
 let db = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -480,7 +504,9 @@ function filtered(col){
     .filter(it => !f.tag || (it.tags||[]).includes(f.tag))
     .filter(it => !f.plat || it.platform===f.plat)
     .filter(it => !q || [it.title,it.text,it.note,it.name,it.comment,(it.tags||[]).join(" ")].join(" ").toLowerCase().includes(q))
-    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    .sort(col==="titles" && state.titleSort==="likes"
+      ? (a,b)=>((b.likes??-1)-(a.likes??-1)) || ((b.createdAt||0)-(a.createdAt||0))
+      : (a,b)=>(b.createdAt||0)-(a.createdAt||0));
 }
 
 function tagUse(col, tag){ return state.data[col].filter(it=>(it.tags||[]).includes(tag)).length; }
@@ -551,9 +577,13 @@ function render(){
   renderRail();
   const v = $("#view");
   if (state.mode==="loading"){ v.innerHTML = `<div class="empty">加载中…</div>`; return; }
+  const tbar = col==="titles" ? `<div class="tbar">
+      ${state.canWrite?`<button type="button" class="btn tbimp" id="openImport"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg>从博主主页批量导入</button>`:"<span></span>"}
+      <span class="vtoggle tsort" role="group" aria-label="排序"><button type="button" data-sort="new" aria-pressed="${state.titleSort==="new"}">最新</button><button type="button" data-sort="likes" aria-pressed="${state.titleSort==="likes"}">最高赞</button></span>
+    </div>` : "";
   if (!items.length){
     const none = !state.data[col].length;
-    v.innerHTML = `<div class="empty"><b>${none?"还是空的":"没有匹配的内容"}</b>${none?{ideas:"把小红书 / 抖音 / ins 的分享链接整段粘贴进来，自动识别平台和标题",titles:"刷到有流量的标题就复制进来，一次可以粘贴多行",creators:"记下值得参考的博主和主页链接",photos:"把喜欢的照片存进来，拍照前翻一翻找构图和姿势"}[col]:"换个关键词或清除 tag 筛选"}</div>`;
+    v.innerHTML = tbar + `<div class="empty"><b>${none?"还是空的":"没有匹配的内容"}</b>${none?{ideas:"把小红书 / 抖音 / ins 的分享链接整段粘贴进来，自动识别平台和标题",titles:"刷到有流量的标题就复制进来，一次可以粘贴多行；也可以从博主主页批量导入",creators:"记下值得参考的博主和主页链接",photos:"把喜欢的照片存进来，拍照前翻一翻找构图和姿势"}[col]:"换个关键词或清除 tag 筛选"}</div>`;
     return;
   }
   if (col==="photos"){
@@ -586,9 +616,11 @@ function render(){
         </span>
       </button>`).join("")}</div>`;
   } else if (col==="titles"){
-    v.innerHTML = `<div class="list">${items.map(it=>`
+    v.innerHTML = tbar + `<div class="list">${items.map(it=>`
       <div class="trow">
-        <div class="body"><div class="text">${esc(it.text)}</div>${tagsHTML(it.tags)}</div>
+        <div class="body"><div class="text">${esc(it.text)}</div>
+          ${(it.likes!=null||it.source)?`<div class="tmeta">${it.likes!=null?`<span class="lk">♥ ${fmtNum(it.likes)}</span>`:""}${it.source?`<span>${it.url?`<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.source)} ↗</a>`:esc(it.source)}</span>`:""}</div>`:""}
+          ${tagsHTML(it.tags)}</div>
         <div class="rowbtns">
           <button class="iconbtn" data-copy="${it.id}" aria-label="复制标题"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>复制</button>
           ${state.canWrite?`<button class="iconbtn" data-edit="${it.id}" aria-label="编辑">编辑</button>`:""}
@@ -603,6 +635,157 @@ function render(){
         ${it.comment?`<div class="comment">${esc(it.comment)}</div>`:""}
       </div>`).join("")}</div>`;
   }
+}
+
+function fmtNum(n){ if(n==null) return ""; if(n>=1e4) return (Math.round(n/1e3)/10).toString().replace(/\.0$/,"")+"万"; return String(n); }
+function parseNum(t){ t=String(t||"").replace(/[,\s]/g,""); const m=t.match(/([\d.]+)(万|w|W|千|k|K)?/); if(!m) return null; let n=parseFloat(m[1]); if(isNaN(n)) return null; if(/万|w|W/.test(m[2]||"")) n*=1e4; else if(/千|k|K/.test(m[2]||"")) n*=1e3; return Math.round(n); }
+
+/* Runs on the creator's profile page in the user's own logged-in browser (bookmarklet or console).
+   Scrolls the page, reads the note cards it shows, then offers the result as text to paste back here. */
+function inspoExtractor(){
+  if (window.__inspoRun) return; window.__inspoRun = 1;
+  const host = location.hostname;
+  const plat = /xiaohongshu/.test(host) ? "xhs" : /douyin/.test(host) ? "douyin" : /instagram/.test(host) ? "ins" : "other";
+  const num = t => { t = String(t||"").replace(/[,\s]/g,""); const m = t.match(/([\d.]+)(万|w|W|千|k|K)?/); if(!m) return null; let n = parseFloat(m[1]); if(isNaN(n)) return null; if(/万|w|W/.test(m[2]||"")) n*=1e4; else if(/千|k|K/.test(m[2]||"")) n*=1e3; return Math.round(n); };
+  const seen = new Map();
+  const LINK = 'a[href*="/explore/"],a[href*="/discovery/item/"],a[href*="/user/profile/"][href*="xsec_token"],a[href*="/video/"],a[href*="/note/"],a[href*="/p/"],a[href*="/reel/"]';
+  const author = (document.querySelector('.user-name, .user-nickname, [data-e2e="user-info"] h1, h1, h2')||{}).innerText || document.title;
+  let lastCard = null;
+  const grab = () => {
+    let cards = [...document.querySelectorAll('section.note-item, [data-e2e="user-post-list"] li, [data-e2e="scroll-list"] li')];
+    if (!cards.length) cards = [...document.querySelectorAll(LINK)].map(a => a.closest("li,section,article") || a.parentElement || a);
+    if (cards.length) lastCard = cards[cards.length-1];
+    for (const c of cards){
+      const a = c.matches && c.matches("a") ? c : (c.querySelector(LINK) || c.querySelector("a[href]"));
+      const href = a ? new URL(a.getAttribute("href"), location.href).href : "";
+      let title = ((c.querySelector(".footer .title, .title, [class*='title']")||{}).innerText
+        || (c.querySelector("p")||{}).innerText || (c.querySelector("img[alt]")||{}).alt || "").replace(/\s+/g," ").trim();
+      if (!title || title.length < 2) continue;
+      let lk = c.querySelector(".like-wrapper .count, [class*='like'] .count, [class*='like-count'], [data-e2e*='like']");
+      let likes = lk ? num(lk.innerText) : null;
+      if (likes == null){ const ns = (c.innerText||"").replace(title,"").match(/[\d.]+\s*(万|w|k)?/gi); if (ns) likes = num(ns[ns.length-1]); }
+      const key = href || title;
+      if (!seen.has(key)) seen.set(key, {title, likes, url:href});
+    }
+  };
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;z-index:2147483647;right:16px;bottom:16px;width:340px;max-width:calc(100vw - 32px);background:#1B1A21;color:#fff;border-radius:14px;padding:14px;font:14px/1.5 -apple-system,PingFang SC,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)";
+  box.innerHTML = '<b>灵感池 · 抓标题</b><div id="ip-st" style="margin-top:6px;color:#C9C6D3">正在往下滚动收集…</div>';
+  document.body.appendChild(box);
+  const st = box.querySelector("#ip-st");
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  (async () => {
+    let last = 0, stall = 0;
+    for (let i = 0; i < 80 && seen.size < 110; i++){
+      grab(); st.textContent = "正在往下滚动收集… 已找到 " + seen.size + " 条";
+      if (lastCard && lastCard.scrollIntoView) lastCard.scrollIntoView({block:"end"});
+      window.scrollBy(0, Math.round(innerHeight * 0.5)); await sleep(1200); grab();
+      if (seen.size === last){ if (++stall >= 4) break; } else { stall = 0; last = seen.size; }
+    }
+    const rows = [...seen.values()].sort((a,b) => (b.likes??-1) - (a.likes??-1));
+    const text = ["#inspo-pool\t" + plat + "\t" + String(author).trim().split("\n")[0] + "\t" + location.href]
+      .concat(rows.map(r => (r.likes ?? "") + "\t" + r.title.replace(/\t/g," ") + "\t" + r.url)).join("\n");
+    st.innerHTML = rows.length
+      ? "找到 <b>" + rows.length + "</b> 条。点复制，回到灵感池粘贴。"
+      : "没找到笔记。确认已经登录、页面停在博主主页的笔记列表，再点一次书签。";
+    if (!rows.length){ window.__inspoRun = 0; return; }
+    const ta = document.createElement("textarea"); ta.value = text; ta.readOnly = true;
+    ta.style.cssText = "width:100%;height:90px;margin-top:8px;border-radius:8px;border:0;padding:6px;font:12px monospace;color:#111;background:#fff;box-sizing:border-box";
+    const bt = document.createElement("button"); bt.textContent = "复制结果";
+    bt.style.cssText = "margin-top:8px;width:100%;height:38px;border:0;border-radius:10px;background:#FF5C82;color:#1B0C11;font-weight:700;font-size:15px;cursor:pointer";
+    const cl = document.createElement("button"); cl.textContent = "关闭";
+    cl.style.cssText = "margin-top:6px;width:100%;height:32px;border:0;border-radius:10px;background:transparent;color:#C9C6D3;cursor:pointer";
+    bt.onclick = async () => { try{ await navigator.clipboard.writeText(text); bt.textContent = "已复制 ✓"; }catch(e){ ta.focus(); ta.select(); document.execCommand && document.execCommand("copy"); bt.textContent = "已选中，按 ⌘C 复制"; } };
+    cl.onclick = () => { box.remove(); window.__inspoRun = 0; };
+    box.append(ta, bt, cl);
+  })();
+}
+const EXTRACT_SRC = "(" + inspoExtractor.toString() + ")()";
+const BOOKMARKLET = "javascript:" + encodeURIComponent(EXTRACT_SRC);
+
+/* parse what the extractor produced (or any pasted list: one title per line, optional likes) */
+function parseImport(text){
+  const lines = String(text||"").split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  let meta = {plat:"", author:"", page:""};
+  const rows = []; const seen = new Set();
+  for (const l of lines){
+    if (l.startsWith("#inspo-pool")){ const [, plat, author, page] = l.split("\t"); meta = {plat:plat||"", author:(author||"").trim(), page:page||""}; continue; }
+    let likes = null, title = l, url = "";
+    const parts = l.split("\t");
+    if (parts.length >= 2){ likes = parts[0] === "" ? null : parseNum(parts[0]); title = parts[1]; url = parts[2] || ""; }
+    else { const m = l.match(/^(.*?)[\s|｜,，]+(♥|❤|赞)?\s*([\d.]+\s*(万|w|k)?)\s*(赞)?$/i); if (m && m[1].length > 1){ title = m[1]; likes = parseNum(m[3]); } }
+    title = String(title||"").trim(); if (!title || seen.has(title)) continue;
+    seen.add(title); rows.push({title, likes, url});
+  }
+  rows.sort((a,b)=>(b.likes??-1)-(a.likes??-1));
+  return {meta, rows};
+}
+
+function importSheet(){
+  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  openSheet(`<h2>从博主主页批量导入</h2>
+    <div class="steps">
+      <div class="step"><span class="sn">1</span><div><b>${isMobile?"在 Mac 上操作":"把下面这个按钮拖到浏览器书签栏"}</b>
+        ${isMobile?`<div class="hint" style="font-size:13px">小红书、抖音的手机网页看不到完整主页，这一步需要在电脑浏览器里做。在 Mac 上打开这个灵感池网址，点同样的按钮就能看到书签。</div>`:`<div class="hint" style="font-size:13px">只需要拖一次。拖不了的话，用下面的「复制脚本」。</div>
+        <div class="bmrow"><a class="bm" id="bm" href="#" title="拖到书签栏">抓标题到灵感池</a><button type="button" class="btn" id="cpscript">复制脚本</button></div>`}</div></div>
+      <div class="step"><span class="sn">2</span><div><b>登录小红书 / 抖音，打开博主主页，点书签</b><div class="hint" style="font-size:13px">会自动往下滚，收集约 100 条笔记的标题和赞数，完成后点「复制结果」。用复制脚本的话：在博主主页按 ⌥⌘J 打开控制台，粘贴脚本回车（Chrome 第一次会让你先输入 allow pasting）。</div></div></div>
+      <div class="step"><span class="sn">3</span><div><b>粘贴到这里</b></div></div>
+    </div>
+    <textarea class="input" id="imptext" placeholder="粘贴抓到的结果。也可以直接粘贴一串标题，每行一条，带赞数的会自动识别"></textarea>
+    <div id="impprev"></div>
+  `, s=>{
+    const bm = s.querySelector("#bm");
+    if (bm){ bm.setAttribute("href", BOOKMARKLET); bm.addEventListener("click", e=>{ e.preventDefault(); toast("拖到书签栏，在博主主页点它"); }); }
+    s.querySelector("#cpscript")?.addEventListener("click", ()=>copy(EXTRACT_SRC));
+    const ta = s.querySelector("#imptext"), prev = s.querySelector("#impprev");
+    let parsed = null, picked = new Set(), tp = null;
+    const have = new Set(state.data.titles.map(t=>t.text));
+    const draw = () => {
+      parsed = parseImport(ta.value);
+      const rows = parsed.rows;
+      if (!rows.length){ prev.innerHTML = ""; return; }
+      picked = new Set(rows.map((r,i)=>i).filter(i=>!have.has(rows[i].title)));
+      const withLikes = rows.some(r=>r.likes!=null);
+      prev.innerHTML = `
+        <div class="impbar"><span>识别到 <b>${rows.length}</b> 条${parsed.meta.author?`，来自 <b>${esc(parsed.meta.author)}</b>`:""}</span>
+          <span class="impq">${withLikes?`<button type="button" class="chip" data-top="20">前 20</button><button type="button" class="chip" data-top="50">前 50</button>`:""}<button type="button" class="chip" data-top="all">全选</button><button type="button" class="chip" data-top="none">清空</button></span></div>
+        <div class="implist">${rows.map((r,i)=>`<label class="improw${have.has(r.title)?" dup":""}"><input type="checkbox" data-i="${i}" ${picked.has(i)?"checked":""}><span class="imt">${esc(r.title)}${have.has(r.title)?` <em>已存在</em>`:""}</span>${r.likes!=null?`<span class="lk">♥ ${fmtNum(r.likes)}</span>`:""}</label>`).join("")}</div>
+        <label class="f" for="impsrc">来源</label>
+        <input class="input" id="impsrc" value="${esc(parsed.meta.author)}" placeholder="博主名，会显示在标题下面">
+        <label class="f">给这批加 tag</label><div id="imptp"></div>
+        ${parsed.meta.page?`<label class="addc"><input type="checkbox" id="addcreator" ${state.data.creators.some(c=>c.url===parsed.meta.page)?"disabled":"checked"}> 同时加入「参考博主」${state.data.creators.some(c=>c.url===parsed.meta.page)?"（已在列表里）":""}</label>`:""}
+        <div class="actions"><button type="button" class="btn primary grow" id="impgo">导入 ${picked.size} 条</button></div>`;
+      tp = tagPicker("titles", []); prev.querySelector("#imptp").appendChild(tp.el);
+      const go = prev.querySelector("#impgo");
+      const sync = () => { go.textContent = `导入 ${picked.size} 条`; go.disabled = !picked.size; prev.querySelectorAll("[data-i]").forEach(cb=>cb.checked = picked.has(+cb.dataset.i)); };
+      prev.querySelector(".implist").addEventListener("change", e=>{ const i = +e.target.dataset.i; e.target.checked ? picked.add(i) : picked.delete(i); sync(); });
+      prev.querySelector(".impq").addEventListener("click", e=>{
+        const b = e.target.closest("[data-top]"); if(!b) return; const v = b.dataset.top;
+        picked = new Set(rows.map((r,i)=>i).filter(i=> v==="none" ? false : v==="all" ? true : i < +v));
+        sync();
+      });
+      go.addEventListener("click", async ()=>{
+        const source = prev.querySelector("#impsrc").value.trim(), tags = tp.get();
+        const url0 = parsed.meta.page;
+        const list = rows.filter((r,i)=>picked.has(i));
+        go.disabled = true; go.textContent = "导入中…";
+        let n = 0;
+        for (const r of list){
+          const obj = {text:r.title, tags:[...tags]};
+          if (r.likes!=null) obj.likes = r.likes;
+          if (source) obj.source = source;
+          if (r.url) obj.url = r.url;
+          await addItem("titles", obj); n++;
+        }
+        const ac = prev.querySelector("#addcreator");
+        if (ac && ac.checked && !ac.disabled) await addItem("creators", {name:source||parsed.meta.author||"", url:url0, platform:PLAT[parsed.meta.plat]?parsed.meta.plat:detectPlat(url0), comment:`导入了 ${n} 条标题`, tags:[]});
+        closeSheet(); state.titleSort = list.some(r=>r.likes!=null) ? "likes" : state.titleSort; render();
+        toast(`已导入 ${n} 条`);
+      });
+      sync();
+    };
+    let t; ta.addEventListener("input", ()=>{ clearTimeout(t); t = setTimeout(draw, 250); });
+  });
 }
 
 function domainOf(u){ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(e){ return u; } }
@@ -850,7 +1033,9 @@ $("#rail").addEventListener("click", e=>{
 });
 $("#view").addEventListener("click", e=>{
   const ph = e.target.closest("[data-photo]"); if(ph){ openViewer(ph.dataset.photo); return; }
-  if (e.target.closest(".iopen")) return;
+  if (e.target.closest("#openImport")){ importSheet(); return; }
+  const so = e.target.closest("[data-sort]"); if (so){ state.titleSort = so.dataset.sort; render(); return; }
+  if (e.target.closest(".iopen") || e.target.closest(".tmeta a")) return;
   const o = e.target.closest("[data-open]"); if(o){ ideaDetail(o.dataset.open); return; }
   const c = e.target.closest("[data-copy]");
   if(c){ const it=find("titles",c.dataset.copy); const txt=c.closest(".trow").querySelector(".text");
